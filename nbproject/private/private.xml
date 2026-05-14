@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project-private xmlns="http://www.netbeans.org/ns/project-private/1">
+    <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
+    <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
+        <group>
+            <file>file:/D:/Praktikum%20PBO/GamePokemon/src/com/pokemongame/main/Main.java</file>
+            <file>file:/D:/Praktikum%20PBO/GamePokemon/src/com/pokemongame/main/GameWindow.java</file>
+            <file>file:/D:/Praktikum%20PBO/GamePokemon/src/com/pokemongame/main/GameLoop.java</file>
+            <file>file:/D:/Praktikum%20PBO/GamePokemon/src/com/pokemongame/main/GamePanel.java</file>
+            <file>file:/D:/Praktikum%20PBO/GamePokemon/src/com/pokemongame/input/KeyHandler.java</file>
+            <file>file:/D:/Praktikum%20PBO/GamePokemon/src/com/pokemongame/state/GameState.java</file>
+            <file>file:/D:/Praktikum%20PBO/GamePokemon/src/com/pokemongame/entity/Entity.java</file>
+            <file>file:/D:/Praktikum%20PBO/GamePokemon/src/com/pokemongame/world/Tile.java</file>
+            <file>file:/D:/Praktikum%20PBO/GamePokemon/src/com/pokemongame/world/TileMap.java</file>
+            <file>file:/D:/Praktikum%20PBO/GamePokemon/src/com/pokemongame/world/Camera.java</file>
+            <file>file:/D:/Praktikum%20PBO/GamePokemon/src/com/pokemongame/entity/Player.java</file>
+            <file>file:/D:/Praktikum%20PBO/GamePokemon/src/com/pokemongame/state/OverworldState.java</file>
+            <file>file:/D:/Praktikum%20PBO/GamePokemon/src/com/pokemongame/pokemon/Pokemon.java</file>
+            <file>file:/D:/Praktikum%20PBO/GamePokemon/src/com/pokemongame/pokemon/Move.java</file>
+            <file>file:/D:/Praktikum%20PBO/GamePokemon/src/com/pokemongame/pokemon/PhysicalMove.java</file>
+            <file>file:/D:/Praktikum%20PBO/GamePokemon/src/com/pokemongame/pokemon/SpecialMove.java</file>
+            <file>file:/D:/Praktikum%20PBO/GamePokemon/src/com/pokemongame/pokemon/FirePokemon.java</file>
+            <file>file:/D:/Praktikum%20PBO/GamePokemon/src/com/pokemongame/pokemon/WaterPokemon.java</file>
+            <file>file:/D:/Praktikum%20PBO/GamePokemon/src/com/pokemongame/pokemon/GrassPokemon.java</file>
+            <file>file:/D:/Praktikum%20PBO/GamePokemon/src/com/pokemongame/entity/NPC.java</file>
+            <file>file:/D:/Praktikum%20PBO/GamePokemon/src/com/pokemongame/entity/WildPokemon.java</file>
+            <file>file:/D:/Praktikum%20PBO/GamePokemon/src/com/pokemongame/ui/DialogBox.java</file>
+            <file>file:/D:/Praktikum%20PBO/GamePokemon/src/com/pokemongame/state/DialogState.java</file>
+            <file>file:/D:/Praktikum%20PBO/GamePokemon/src/com/pokemongame/ui/HUD.java</file>
+            <file>file:/D:/Praktikum%20PBO/GamePokemon/src/com/pokemongame/state/BattleState.java</file>
+            <file>file:/D:/Praktikum%20PBO/GamePokemon/src/com/pokemongame/util/SpriteLoader.java</file>
+            <file>file:/D:/Praktikum%20PBO/GamePokemon/res/map/map01.txt</file>
+        </group>
+    </open-files>
+</project-private>
