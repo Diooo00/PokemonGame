@@ -44,21 +44,24 @@ public class BattleState extends GameState {
 
     private boolean upWasPressed, downWasPressed, actionWasPressed;
 
-    public BattleState(GamePanel gamePanel,
-                       Pokemon playerPokemon,
-                       Pokemon enemyPokemon,
+    public BattleState(GamePanel gp, Pokemon playerP, Pokemon enemyP,
                        GameState previousState) {
-        super(gamePanel);
-        this.playerPokemon  = playerPokemon;
-        this.enemyPokemon   = enemyPokemon;
-        this.previousState  = previousState;
-        this.keyHandler     = gamePanel.getKeyHandler();
-        this.hud            = new HUD();
+        super(gp);
+        this.playerPokemon = playerP;
+        this.enemyPokemon = enemyP;
+        this.previousState = previousState; // Simpan state map
+        this.keyHandler = gp.getKeyHandler();
+        this.hud = new HUD();
 
-        battleMessage = "Wild " + enemyPokemon.getName() + " appeared!";
-        messageTimer  = MESSAGE_DURATION;
+        this.battleMessage = "A wild " + enemyP.getName() + " appeared!";
+        this.messageTimer = MESSAGE_DURATION;
     }
 
+    private void endBattle() {
+        // Balik ke map (OverworldState) yang tadi kita simpan
+        gamePanel.setCurrentState(previousState);
+    }
+    
     @Override
     public void update() {
         // Hitung mundur pesan

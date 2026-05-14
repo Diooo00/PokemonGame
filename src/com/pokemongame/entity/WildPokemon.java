@@ -38,12 +38,14 @@ public class WildPokemon extends Entity {
 
     // Spawn pokemon random berdasarkan probabilitas
     private Pokemon generateRandom() {
-        int level = 2 + (int)(Math.random() * 5); // level 2-6
-        double roll = Math.random();
+        int level = 2 + (int)(Math.random() * 5);
 
-        if (roll < 0.33) return new FirePokemon("Charmander", level);
-        if (roll < 0.66) return new WaterPokemon("Squirtle", level);
-        return new GrassPokemon("Bulbasaur", level);
+        // Pilih ID Pokemon secara acak (Misal ID 1, 4, atau 7 sesuai SQL yang kita buat tadi)
+        int[] availableIds = {1, 4, 7}; 
+        int randomId = availableIds[(int)(Math.random() * availableIds.length)];
+
+        // Panggil method statis yang baru kita buat!
+        return Pokemon.loadFromDB(randomId, level);
     }
 
     @Override

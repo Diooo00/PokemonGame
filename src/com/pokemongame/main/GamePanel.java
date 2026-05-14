@@ -49,7 +49,7 @@ public class GamePanel extends JPanel {
         setBackground(Color.BLACK);
         setDoubleBuffered(true);
 
-        keyHandler = new KeyHandler();
+        keyHandler = new KeyHandler(this);
         addKeyListener(keyHandler);
         setFocusable(true);
         requestFocusInWindow();

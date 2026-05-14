@@ -136,15 +136,20 @@ public void update() {
     }
 
     public void loadPosition() {
-        String sql = "SELECT * FROM player_save WHERE id = 1";
+        String sql = "SELECT world_x, world_y FROM player_save WHERE id = 1";
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
+
             if (rs.next()) {
-                this.worldX = GamePanel.TILE_SIZE * 50;
-                this.worldY = GamePanel.TILE_SIZE * 50;
+                this.worldX = rs.getInt("world_x");
+                this.worldY = rs.getInt("world_y");
             }
-        } catch (SQLException e) { e.printStackTrace(); }
+        } catch (SQLException e) { 
+            // Jika DB mati, gunakan posisi default agar tidak bug
+            this.worldX = GamePanel.TILE_SIZE * 50;
+            this.worldY = GamePanel.TILE_SIZE * 50;
+        }
     }
     
     public void interact() {
