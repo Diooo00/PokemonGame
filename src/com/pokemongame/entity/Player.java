@@ -36,11 +36,13 @@ public class Player extends Entity {
         super(gp);
         this.gamePanel = gp;
         this.keyHandler = keyHandler;
-        this.cChecker = new CollisionChecker(gp);
-        this.speed = 6;
+//        this.cChecker = new CollisionChecker(gp);
+        this.worldX = GamePanel.TILE_SIZE * 50; 
+        this.worldY = GamePanel.TILE_SIZE * 50;
+        this.speed = 7;
         
         setupPlayerSprites();
-        loadPosition();
+//        loadPosition();
         
         this.hitbox = new java.awt.Rectangle(8, 16, 32, 32);
         
@@ -63,56 +65,58 @@ public class Player extends Entity {
     }
 
     @Override
-    public void update() {
-        boolean isMoving = false;
+public void update() {
+    // Cek apakah ada tombol arah yang sedang ditekan
+    if (keyHandler.upPressed || keyHandler.downPressed || keyHandler.leftPressed || keyHandler.rightPressed) {
+        
+        // 1. Tentukan Arah dan Ganti Baris Sprite (spriteRow)
+        if (keyHandler.upPressed) {
+            direction = "UP";
+            spriteRow = 1; // Baris ke-2 di player.png (Atas)
+        } else if (keyHandler.downPressed) {
+            direction = "DOWN";
+            spriteRow = 0; // Baris ke-1 di player.png (Bawah)
+        } else if (keyHandler.leftPressed) {
+            direction = "LEFT";
+            spriteRow = 2; // Baris ke-3 di player.png (Kiri)
+        } else if (keyHandler.rightPressed) {
+            direction = "RIGHT";
+            spriteRow = 3; // Baris ke-4 di player.png (Kanan)
+        }
+
+        // 2. Logika Collision
         collisionOn = false;
+        gamePanel.cChecker.checkTile(this);
 
-        if (keyHandler.upPressed || keyHandler.downPressed || keyHandler.leftPressed || keyHandler.rightPressed) {
-            
-            // 1. Tentukan arah karakter menghadap ke mana
-            if (keyHandler.upPressed) { direction = "up"; }
-            else if (keyHandler.downPressed) { direction = "down"; }
-            else if (keyHandler.leftPressed) { direction = "left"; }
-            else if (keyHandler.rightPressed) { direction = "right"; }
-            
-            // 2. Cek apakah di depannya ada tembok (Collision)
-            collisionOn = false;
-            if (cChecker != null) {
-                cChecker.checkTile(this);
+        // 3. Logika Pergerakan
+        if (!collisionOn) {
+            switch (direction) {
+                case "UP":    worldY -= speed; break;
+                case "DOWN":  worldY += speed; break;
+                case "LEFT":  worldX -= speed; break;
+                case "RIGHT": worldX += speed; break;
             }
-            
-            // 3. JIKA TIDAK ADA TEMBOK (!collisionOn), BARU BOLEH JALAN
-            if (collisionOn == false) {
-                switch (direction) {
-                    case "UP": 
-                    case "up": worldY -= speed; break;
-                    
-                    case "DOWN": 
-                    case "down": worldY += speed; break;
-                    
-                    case "LEFT": 
-                    case "left": worldX -= speed; break;  // Ini Obat Kiri
-                    
-                    case "RIGHT": 
-                    case "right": worldX += speed; break; // Ini Obat Kanan
-                }
-            }
+        }
 
-            spriteCounter++;
-            if (spriteCounter > 12) {
-                spriteCol = (spriteCol == 1) ? 2 : 1;
-                spriteCounter = 0;
+        // 4. Logika Jalannya Animasi (Ganti Kolom/spriteCol)
+        spriteCounter++;
+        if (spriteCounter > 12) { // Kecepatan ganti frame
+            spriteCol++;
+            if (spriteCol >= COLS) { 
+                spriteCol = 0; // Reset ke frame pertama jika sudah mentok
             }
-        } else {
-            spriteCol = 0;
             spriteCounter = 0;
         }
+    } else {
+        // OPSIONAL: Jika tidak gerak, kembalikan ke frame berdiri diam (kolom tengah)
+        spriteCol = 1; 
     }
+}
 
     public void render(Graphics2D g2d) {
         // Menghitung posisi render di layar relatif terhadap kamera
-        int screenX = (gamePanel.SCREEN_WIDTH / 2) - (gamePanel.TILE_SIZE / 2);
-        int screenY = (gamePanel.SCREEN_HEIGHT / 2) - (gamePanel.TILE_SIZE / 2);
+        int screenX = worldX - gamePanel.getCamera().x;
+        int screenY = worldY - gamePanel.getCamera().y;
 
         // Ambil gambar sprite sesuai arah (sesuaikan variabel dengan kodemu)
         BufferedImage image = null; // Default ke arah bawah jika animasi belum jalan

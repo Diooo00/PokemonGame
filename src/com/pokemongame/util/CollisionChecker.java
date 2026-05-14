@@ -31,12 +31,11 @@ public class CollisionChecker {
 
         int tileNum1, tileNum2;
 
-        switch(entity.direction) {
+        switch (entity.direction) {
             case "UP":
                 entityTopRow = (entityTopWorldY - entity.speed) / GamePanel.TILE_SIZE;
                 tileNum1 = gp.getTileMap().getTileNum(entityLeftCol, entityTopRow);
                 tileNum2 = gp.getTileMap().getTileNum(entityRightCol, entityTopRow);
-                // Saat mengecek tabrakan, panggil method isTileSolid:
                 if (gp.getTileMap().isTileSolid(tileNum1) || gp.getTileMap().isTileSolid(tileNum2)) {
                     entity.collisionOn = true;
                 }
@@ -45,7 +44,6 @@ public class CollisionChecker {
                 entityBottomRow = (entityBottomWorldY + entity.speed) / GamePanel.TILE_SIZE;
                 tileNum1 = gp.getTileMap().getTileNum(entityLeftCol, entityBottomRow);
                 tileNum2 = gp.getTileMap().getTileNum(entityRightCol, entityBottomRow);
-                // Saat mengecek tabrakan, panggil method isTileSolid:
                 if (gp.getTileMap().isTileSolid(tileNum1) || gp.getTileMap().isTileSolid(tileNum2)) {
                     entity.collisionOn = true;
                 }
@@ -54,7 +52,6 @@ public class CollisionChecker {
                 entityLeftCol = (entityLeftWorldX - entity.speed) / GamePanel.TILE_SIZE;
                 tileNum1 = gp.getTileMap().getTileNum(entityLeftCol, entityTopRow);
                 tileNum2 = gp.getTileMap().getTileNum(entityLeftCol, entityBottomRow);
-                // Saat mengecek tabrakan, panggil method isTileSolid:
                 if (gp.getTileMap().isTileSolid(tileNum1) || gp.getTileMap().isTileSolid(tileNum2)) {
                     entity.collisionOn = true;
                 }
@@ -63,7 +60,6 @@ public class CollisionChecker {
                 entityRightCol = (entityRightWorldX + entity.speed) / GamePanel.TILE_SIZE;
                 tileNum1 = gp.getTileMap().getTileNum(entityRightCol, entityTopRow);
                 tileNum2 = gp.getTileMap().getTileNum(entityRightCol, entityBottomRow);
-                // Saat mengecek tabrakan, panggil method isTileSolid:
                 if (gp.getTileMap().isTileSolid(tileNum1) || gp.getTileMap().isTileSolid(tileNum2)) {
                     entity.collisionOn = true;
                 }
@@ -85,10 +81,10 @@ public class CollisionChecker {
                 target[i].hitbox.y = target[i].worldY + target[i].hitbox.y;
 
                 // Prediksi pergerakan
-                switch(entity.direction) {
-                    case "UP": entity.hitbox.y -= entity.speed; break;
-                    case "DOWN": entity.hitbox.y += entity.speed; break;
-                    case "LEFT": entity.hitbox.x -= entity.speed; break;
+                switch (entity.direction) {
+                    case "UP":    entity.hitbox.y -= entity.speed; break;
+                    case "DOWN":  entity.hitbox.y += entity.speed; break;
+                    case "LEFT":  entity.hitbox.x -= entity.speed; break;
                     case "RIGHT": entity.hitbox.x += entity.speed; break;
                 }
 

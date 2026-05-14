@@ -28,12 +28,12 @@ public class GamePanel extends JPanel {
 
     // Ukuran tile & layar
     public static final int ORIGINAL_TILE_SIZE = 32;
-    public static final int SCALE = 3;
-    public static final int TILE_SIZE = ORIGINAL_TILE_SIZE * SCALE;
-    public static final int SCREEN_COLS = 20;
-    public static final int SCREEN_ROWS = 12;
-    public static final int SCREEN_WIDTH = TILE_SIZE * SCREEN_COLS;   // 1920px
-    public static final int SCREEN_HEIGHT = TILE_SIZE * SCREEN_ROWS;  // 1080px
+    public static final int SCALE = 2;                              // Turun dari 3 → 2
+    public static final int TILE_SIZE = ORIGINAL_TILE_SIZE * SCALE; // 64px per tile
+    public static final int SCREEN_COLS = 30;                       // Naik dari 20 → 30
+    public static final int SCREEN_ROWS = 18;                       // Naik dari 12 → 18
+    public static final int SCREEN_WIDTH  = TILE_SIZE * SCREEN_COLS;  // 1920px
+    public static final int SCREEN_HEIGHT = TILE_SIZE * SCREEN_ROWS;  // 1152px
 
     private GameLoop gameLoop;
     private KeyHandler keyHandler;
