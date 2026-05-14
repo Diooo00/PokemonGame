@@ -57,8 +57,8 @@ public class GamePanel extends JPanel {
         gameLoop = new GameLoop(this);
         tileMap = new TileMap(this);
         cChecker = new CollisionChecker(this); // Inisialisasi ini penting
-        currentState = new OverworldState(this);
         this.camera = new Camera(this);
+        currentState = new OverworldState(this);
     }
 
     public Camera getCamera() {

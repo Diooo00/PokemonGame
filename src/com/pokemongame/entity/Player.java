@@ -41,6 +41,11 @@ public class Player extends Entity {
         
         setupPlayerSprites();
         loadPosition();
+        
+        this.hitbox = new java.awt.Rectangle(8, 16, 32, 32);
+        
+        this.hitboxDefaultX = this.hitbox.x;
+        this.hitboxDefaultY = this.hitbox.y;
     }
 
     private void setupPlayerSprites() {
@@ -63,24 +68,38 @@ public class Player extends Entity {
         collisionOn = false;
 
         if (keyHandler.upPressed || keyHandler.downPressed || keyHandler.leftPressed || keyHandler.rightPressed) {
-            if (keyHandler.downPressed) { direction = "DOWN"; spriteRow = 0; isMoving = true; }
-            else if (keyHandler.upPressed) { direction = "UP"; spriteRow = 1; isMoving = true; }
-            else if (keyHandler.leftPressed) { direction = "LEFT"; spriteRow = 2; isMoving = true; }
-            else if (keyHandler.rightPressed) { direction = "RIGHT"; spriteRow = 3; isMoving = true; }
-
-            gamePanel.cChecker.checkTile(this);
             
+            // 1. Tentukan arah karakter menghadap ke mana
+            if (keyHandler.upPressed) { direction = "up"; }
+            else if (keyHandler.downPressed) { direction = "down"; }
+            else if (keyHandler.leftPressed) { direction = "left"; }
+            else if (keyHandler.rightPressed) { direction = "right"; }
+            
+            // 2. Cek apakah di depannya ada tembok (Collision)
+            collisionOn = false;
+            if (cChecker != null) {
+                cChecker.checkTile(this);
+            }
+            
+            // 3. JIKA TIDAK ADA TEMBOK (!collisionOn), BARU BOLEH JALAN
             if (collisionOn == false) {
-                switch(direction) {
-                    case "UP": worldY -= speed; break;
-                    case "DOWN": worldY += speed; break;
-                    case "LEFT": worldX -= speed; break;
-                    case "RIGHT": worldX += speed; break;
+                switch (direction) {
+                    case "UP": 
+                    case "up": worldY -= speed; break;
+                    
+                    case "DOWN": 
+                    case "down": worldY += speed; break;
+                    
+                    case "LEFT": 
+                    case "left": worldX -= speed; break;  // Ini Obat Kiri
+                    
+                    case "RIGHT": 
+                    case "right": worldX += speed; break; // Ini Obat Kanan
                 }
             }
 
             spriteCounter++;
-            if (spriteCounter > 15) {
+            if (spriteCounter > 12) {
                 spriteCol = (spriteCol == 1) ? 2 : 1;
                 spriteCounter = 0;
             }
@@ -91,27 +110,25 @@ public class Player extends Entity {
     }
 
     public void render(Graphics2D g2d) {
-        // 1. Ambil gambar dari array sprite
-        BufferedImage image = playerSprites[spriteRow][spriteCol];
-        if (playerSprites != null && spriteRow < playerSprites.length && spriteCol < playerSprites[0].length) {
-            image = playerSprites[spriteRow][spriteCol];
+        // Menghitung posisi render di layar relatif terhadap kamera
+        int screenX = (gamePanel.SCREEN_WIDTH / 2) - (gamePanel.TILE_SIZE / 2);
+        int screenY = (gamePanel.SCREEN_HEIGHT / 2) - (gamePanel.TILE_SIZE / 2);
+
+        // Ambil gambar sprite sesuai arah (sesuaikan variabel dengan kodemu)
+        BufferedImage image = null; // Default ke arah bawah jika animasi belum jalan
+
+        if (playerSprites != null) {
+            image = playerSprites[spriteRow][spriteCol]; 
         }
-
-        // 2. Hitung posisi layar
-        int screenX = worldX - gamePanel.getCamera().x;
-        int screenY = worldY - gamePanel.getCamera().y;
-
-        System.out.println("Player World: " + worldX + "," + worldY + 
-                   " | Camera: " + gamePanel.getCamera().x + "," + gamePanel.getCamera().y + 
-                   " | Screen: " + screenX + "," + screenY);
         
-        // 3. Hanya gambar jika gambar ada
         if (image != null) {
-            g2d.drawImage(image, screenX, screenY, GamePanel.TILE_SIZE, GamePanel.TILE_SIZE, null);
+            // Jika sprite ketemu, gambar karakternya
+            g2d.drawImage(image, screenX, screenY, gamePanel.TILE_SIZE, gamePanel.TILE_SIZE, null);
         } else {
-            // DEBUG: Jika masuk ke sini, artinya gambarmu belum ter-load!
-            System.out.println("ERROR: Player sprite is NULL! Row: " + spriteRow + " Col: " + spriteCol);
-         }
+            // JIKA SPRITE GAGAL DIMUAT, TAMPILKAN KOTAK MERAH (Untuk Debugging)
+            g2d.setColor(java.awt.Color.RED);
+            g2d.fillRect(screenX, screenY, gamePanel.TILE_SIZE, gamePanel.TILE_SIZE);
+        }   
     }
 
     public void loadPosition() {

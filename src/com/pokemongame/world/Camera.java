@@ -11,12 +11,13 @@ import com.pokemongame.entity.Entity;
  * @author thety
  */
 public class Camera {
-    private GamePanel gamePanel;
+    private GamePanel gp;
 
     public int x; // offset render horizontal
     public int y; // offset render vertikal
 
     public Camera(GamePanel gp) {
+        this.gp = gp;
         this.x = 0;
         this.y = 0;
     }

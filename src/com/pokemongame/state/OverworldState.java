@@ -29,15 +29,21 @@ public class OverworldState extends GameState {
         super(gamePanel);
         tileMap   = gamePanel.getTileMap();
         keyHandler = gamePanel.getKeyHandler();
-        player    = new Player(gamePanel, keyHandler);        
+        player    = new Player(gamePanel, keyHandler);     
+        this.camera = gamePanel.getCamera();
         setupNPCs();
     }
     
     @Override
     public void update() {
-        player.update();
-        camera.update(player);
-        checkWildEncounter();
+        if (player != null) {
+            player.update();
+            
+            // PASTIKAN KAMERA SELALU DI-UPDATE SETELAH PLAYER BERGERAK
+            if (camera != null) {
+                camera.update(player); 
+            }
+        }
     }
 
     private void checkWildEncounter() {
@@ -73,6 +79,10 @@ public class OverworldState extends GameState {
     public void render(Graphics2D g2d) {
         tileMap.render(g2d, camera.x, camera.y);
         player.render(g2d);
+        
+        if (player != null) {
+        player.render(g2d);
+    }
     }
 
     private void setupNPCs() {
