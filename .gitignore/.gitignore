@@ -1,0 +1,12 @@
+# Folder hasil kompilasi & IDE
+/build/
+/dist/
+/nbproject/private/
+/nbproject/build-impl.xml
+/nbproject/genfiles.properties
+
+# File sistem & sampah
+.class
+.DS_Store
+Thumbs.db
+*.log
