@@ -4,6 +4,7 @@
  */
 package com.pokemongame.state;
 
+import com.pokemongame.entity.NPC;
 import com.pokemongame.entity.Player;
 import com.pokemongame.input.KeyHandler;
 import com.pokemongame.main.GamePanel;
@@ -22,16 +23,16 @@ public class OverworldState extends GameState {
     private Camera camera;
     private TileMap tileMap;
     private KeyHandler keyHandler;
+    private NPC[] npcs = new NPC[10];
 
     public OverworldState(GamePanel gamePanel) {
         super(gamePanel);
-
         tileMap   = gamePanel.getTileMap();
         keyHandler = gamePanel.getKeyHandler();
-        player    = new Player(gamePanel, keyHandler);
-        camera    = new Camera(gamePanel);
+        player    = new Player(gamePanel, keyHandler);        
+        setupNPCs();
     }
-
+    
     @Override
     public void update() {
         player.update();
@@ -40,14 +41,21 @@ public class OverworldState extends GameState {
     }
 
     private void checkWildEncounter() {
-        // Cek apakah player berdiri di tall grass
-        int playerTileCol = player.worldX / GamePanel.TILE_SIZE;
-        int playerTileRow = player.worldY / GamePanel.TILE_SIZE;
+        // 1. Pastikan nama variabel konsisten
+        int playerCol = player.worldX / GamePanel.TILE_SIZE;
+        int playerRow = player.worldY / GamePanel.TILE_SIZE;
 
-        if (tileMap.isTallGrass(playerTileRow, playerTileCol)) {
-            // 1% chance per update = sekitar 1 encounter per 1-2 detik di rumput
-            if (Math.random() < 0.01) {
-                triggerBattleState();
+        // 2. Gunakan nama yang sama di sini
+        if (tileMap.isTallGrass(playerRow, playerCol)) {
+
+            // 3. Pastikan method isMoving() sudah ditambahkan ke KeyHandler
+            if (keyHandler.isMoving()) { 
+                if (Math.random() < 0.005) {
+                    System.out.println("A wild Pokemon appears!");
+
+                    // Nanti di sini kita buat transisi ke BattleState
+                    // triggerBattle(); 
+                }
             }
         }
     }
@@ -64,6 +72,15 @@ public class OverworldState extends GameState {
     @Override
     public void render(Graphics2D g2d) {
         tileMap.render(g2d, camera.x, camera.y);
-        player.render(g2d, camera.x, camera.y);
+        player.render(g2d);
+    }
+
+    private void setupNPCs() {
+        String[] dialog = {"Halo!", "Selamat datang di dunia Pokemon.", "Semoga harimu menyenangkan!"};
+        npcs[0] = new NPC(gamePanel, GamePanel.TILE_SIZE * 15, GamePanel.TILE_SIZE * 15, dialog);
+    }
+    
+    public NPC[] getNPCs() {
+        return npcs;
     }
 }

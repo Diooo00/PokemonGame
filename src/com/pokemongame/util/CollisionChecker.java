@@ -1,0 +1,112 @@
+/*
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
+ */
+package com.pokemongame.util;
+
+import com.pokemongame.entity.Entity;
+import com.pokemongame.main.GamePanel;
+/**
+ *
+ * @author user
+ */
+public class CollisionChecker {
+    
+    GamePanel gp;
+
+    public CollisionChecker(GamePanel gp) {
+        this.gp = gp;
+    }
+
+    public void checkTile(Entity entity) {
+        int entityLeftWorldX = entity.worldX + entity.hitbox.x;
+        int entityRightWorldX = entity.worldX + entity.hitbox.x + entity.hitbox.width;
+        int entityTopWorldY = entity.worldY + entity.hitbox.y;
+        int entityBottomWorldY = entity.worldY + entity.hitbox.y + entity.hitbox.height;
+
+        int entityLeftCol = entityLeftWorldX / GamePanel.TILE_SIZE;
+        int entityRightCol = entityRightWorldX / GamePanel.TILE_SIZE;
+        int entityTopRow = entityTopWorldY / GamePanel.TILE_SIZE;
+        int entityBottomRow = entityBottomWorldY / GamePanel.TILE_SIZE;
+
+        int tileNum1, tileNum2;
+
+        switch(entity.direction) {
+            case "UP":
+                entityTopRow = (entityTopWorldY - entity.speed) / GamePanel.TILE_SIZE;
+                tileNum1 = gp.getTileMap().getTileNum(entityLeftCol, entityTopRow);
+                tileNum2 = gp.getTileMap().getTileNum(entityRightCol, entityTopRow);
+                // Saat mengecek tabrakan, panggil method isTileSolid:
+                if (gp.getTileMap().isTileSolid(tileNum1) || gp.getTileMap().isTileSolid(tileNum2)) {
+                    entity.collisionOn = true;
+                }
+                break;
+            case "DOWN":
+                entityBottomRow = (entityBottomWorldY + entity.speed) / GamePanel.TILE_SIZE;
+                tileNum1 = gp.getTileMap().getTileNum(entityLeftCol, entityBottomRow);
+                tileNum2 = gp.getTileMap().getTileNum(entityRightCol, entityBottomRow);
+                // Saat mengecek tabrakan, panggil method isTileSolid:
+                if (gp.getTileMap().isTileSolid(tileNum1) || gp.getTileMap().isTileSolid(tileNum2)) {
+                    entity.collisionOn = true;
+                }
+                break;
+            case "LEFT":
+                entityLeftCol = (entityLeftWorldX - entity.speed) / GamePanel.TILE_SIZE;
+                tileNum1 = gp.getTileMap().getTileNum(entityLeftCol, entityTopRow);
+                tileNum2 = gp.getTileMap().getTileNum(entityLeftCol, entityBottomRow);
+                // Saat mengecek tabrakan, panggil method isTileSolid:
+                if (gp.getTileMap().isTileSolid(tileNum1) || gp.getTileMap().isTileSolid(tileNum2)) {
+                    entity.collisionOn = true;
+                }
+                break;
+            case "RIGHT":
+                entityRightCol = (entityRightWorldX + entity.speed) / GamePanel.TILE_SIZE;
+                tileNum1 = gp.getTileMap().getTileNum(entityRightCol, entityTopRow);
+                tileNum2 = gp.getTileMap().getTileNum(entityRightCol, entityBottomRow);
+                // Saat mengecek tabrakan, panggil method isTileSolid:
+                if (gp.getTileMap().isTileSolid(tileNum1) || gp.getTileMap().isTileSolid(tileNum2)) {
+                    entity.collisionOn = true;
+                }
+                break;
+        }
+    }
+    
+    public int checkEntity(Entity entity, Entity[] target) {
+        int index = 999; // 999 artinya tidak ada entity yang kena
+
+        for (int i = 0; i < target.length; i++) {
+            if (target[i] != null) {
+                // Dapatkan posisi hitbox entity (player)
+                entity.hitbox.x = entity.worldX + entity.hitbox.x;
+                entity.hitbox.y = entity.worldY + entity.hitbox.y;
+
+                // Dapatkan posisi hitbox target (NPC)
+                target[i].hitbox.x = target[i].worldX + target[i].hitbox.x;
+                target[i].hitbox.y = target[i].worldY + target[i].hitbox.y;
+
+                // Prediksi pergerakan
+                switch(entity.direction) {
+                    case "UP": entity.hitbox.y -= entity.speed; break;
+                    case "DOWN": entity.hitbox.y += entity.speed; break;
+                    case "LEFT": entity.hitbox.x -= entity.speed; break;
+                    case "RIGHT": entity.hitbox.x += entity.speed; break;
+                }
+
+                // Cek apakah hitbox bersentuhan
+                if (entity.hitbox.intersects(target[i].hitbox)) {
+                    if (target[i] != entity) { // Jangan tabrak diri sendiri
+                        entity.collisionOn = true;
+                        index = i;
+                    }
+                }
+
+                // Reset hitbox ke posisi awal (penting!)
+                entity.hitbox.x = entity.hitboxDefaultX;
+                entity.hitbox.y = entity.hitboxDefaultY;
+                target[i].hitbox.x = target[i].hitboxDefaultX;
+                target[i].hitbox.y = target[i].hitboxDefaultY;
+            }
+        }
+        return index;
+    }
+}

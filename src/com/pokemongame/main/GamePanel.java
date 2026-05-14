@@ -8,6 +8,8 @@ import com.pokemongame.input.KeyHandler;
 import com.pokemongame.state.GameState;
 import com.pokemongame.world.TileMap;
 import com.pokemongame.state.OverworldState;
+import com.pokemongame.util.CollisionChecker;
+import com.pokemongame.world.Camera;
 
 
 import javax.swing.JPanel;
@@ -15,6 +17,7 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.RenderingHints;
 
 /**
  * 
@@ -24,15 +27,19 @@ import java.awt.Graphics2D;
 public class GamePanel extends JPanel {
 
     // Ukuran tile & layar
-    public static final int TILE_SIZE = 32;
+    public static final int ORIGINAL_TILE_SIZE = 32;
+    public static final int SCALE = 3;
+    public static final int TILE_SIZE = ORIGINAL_TILE_SIZE * SCALE;
     public static final int SCREEN_COLS = 20;
-    public static final int SCREEN_ROWS = 16;
-    public static final int SCREEN_WIDTH = TILE_SIZE * SCREEN_COLS;   // 640px
-    public static final int SCREEN_HEIGHT = TILE_SIZE * SCREEN_ROWS;  // 512px
+    public static final int SCREEN_ROWS = 12;
+    public static final int SCREEN_WIDTH = TILE_SIZE * SCREEN_COLS;   // 1920px
+    public static final int SCREEN_HEIGHT = TILE_SIZE * SCREEN_ROWS;  // 1080px
 
     private GameLoop gameLoop;
     private KeyHandler keyHandler;
     private TileMap tileMap;
+    private Camera camera;
+    public CollisionChecker cChecker = new CollisionChecker(this);
     
     // State aktif saat ini
     private GameState currentState;
@@ -49,9 +56,15 @@ public class GamePanel extends JPanel {
 
         gameLoop = new GameLoop(this);
         tileMap = new TileMap(this);
+        cChecker = new CollisionChecker(this); // Inisialisasi ini penting
         currentState = new OverworldState(this);
+        this.camera = new Camera(this);
     }
 
+    public Camera getCamera() {
+        return camera;
+    }
+    
     public TileMap getTileMap() {
         return tileMap;
     }
@@ -82,11 +95,20 @@ public class GamePanel extends JPanel {
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
         Graphics2D g2d = (Graphics2D) g;
+        
+        g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
 
         if (currentState != null) {
             currentState.render(g2d);
         }
 
         g2d.dispose();
+    }
+
+    public OverworldState getOverworldState() {
+        if (currentState instanceof OverworldState) {
+            return (OverworldState) currentState;
+        }
+        return null;
     }
 }

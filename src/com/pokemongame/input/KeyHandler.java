@@ -39,4 +39,9 @@ public class KeyHandler extends KeyAdapter {
         if (code == KeyEvent.VK_D || code == KeyEvent.VK_RIGHT) rightPressed = false;
         if (code == KeyEvent.VK_Z || code == KeyEvent.VK_ENTER) actionPressed = false;
     }
+
+    public boolean isMoving() {
+        // Kembalikan true jika salah satu tombol arah sedang ditekan
+        return upPressed || downPressed || leftPressed || rightPressed;
+    }
 }

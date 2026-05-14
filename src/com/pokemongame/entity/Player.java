@@ -6,62 +6,53 @@ package com.pokemongame.entity;
 
 import com.pokemongame.main.GamePanel;
 import com.pokemongame.input.KeyHandler;
-import com.pokemongame.world.TileMap;
+import com.pokemongame.state.DialogState;
+import com.pokemongame.state.OverworldState;
 import com.pokemongame.util.SpriteLoader;
+import com.pokemongame.util.DatabaseManager;
+import com.pokemongame.util.CollisionChecker;
 import java.awt.Graphics2D;
-import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
+import java.sql.*;
 /**
  *
  * @author thety
  */
 public class Player extends Entity {
-    private KeyHandler keyHandler;
-    private BufferedImage[][] playerSprites;
     
-    public enum Direction { DOWN, LEFT, RIGHT, UP }
-    public Direction direction = Direction.DOWN;
-
+    KeyHandler keyHandler;
+    BufferedImage[][] playerSprites;
+    CollisionChecker cChecker;
+    
+    private final int ROWS = 4; // Baris arah
+    private final int COLS = 3; // Kolom animasi
     private int spriteCounter = 0;
-    private int spriteNum = 0; 
+    private int spriteCol = 0; 
+    private int spriteRow = 0; 
 
-    // SESUAI GAMBAR KAMU: 4 frame menyamping, 1 baris
-    private final int COLS = 4; 
-    private final int ROWS = 1; 
-
-    public Player(GamePanel gamePanel, KeyHandler keyHandler) {
-        super(gamePanel);
+    public BufferedImage up1, down1, left1, right1;
+    
+    public Player(GamePanel gp, KeyHandler keyHandler) {
+        super(gp);
+        this.gamePanel = gp;
         this.keyHandler = keyHandler;
-        this.speed = 4;
-        
-        // Titik spawn
-        this.worldX = GamePanel.TILE_SIZE * 15;
-        this.worldY = GamePanel.TILE_SIZE * 15;
-        
-        // Hitbox biar enak jalannya
-        this.hitbox = new Rectangle(8, 16, 16, 16);
+        this.cChecker = new CollisionChecker(gp);
+        this.speed = 6;
         
         setupPlayerSprites();
+        loadPosition();
     }
 
     private void setupPlayerSprites() {
         BufferedImage fullSheet = SpriteLoader.loadSprite("/sprites/player.png");
         if (fullSheet == null) return;
-
         playerSprites = new BufferedImage[ROWS][COLS];
+        int sW = fullSheet.getWidth() / COLS;
+        int sH = fullSheet.getHeight() / ROWS;
 
-        // INI KUNCINYA: Java menghitung lebar asli per frame
-        int singleFrameWidth = fullSheet.getWidth() / COLS;
-        int singleFrameHeight = fullSheet.getHeight() / ROWS;
-
-        for (int row = 0; row < ROWS; row++) {
-            for (int col = 0; col < COLS; col++) {
-                playerSprites[row][col] = fullSheet.getSubimage(
-                    col * singleFrameWidth, 
-                    row * singleFrameHeight, 
-                    singleFrameWidth, 
-                    singleFrameHeight
-                );
+        for (int r = 0; r < ROWS; r++) {
+            for (int c = 0; c < COLS; c++) {
+                playerSprites[r][c] = fullSheet.getSubimage(c * sW, r * sH, sW, sH);
             }
         }
     }
@@ -69,58 +60,81 @@ public class Player extends Entity {
     @Override
     public void update() {
         boolean isMoving = false;
-        
+        collisionOn = false;
+
         if (keyHandler.upPressed || keyHandler.downPressed || keyHandler.leftPressed || keyHandler.rightPressed) {
-            isMoving = true;
-            int nextX = worldX;
-            int nextY = worldY;
+            if (keyHandler.downPressed) { direction = "DOWN"; spriteRow = 0; isMoving = true; }
+            else if (keyHandler.upPressed) { direction = "UP"; spriteRow = 1; isMoving = true; }
+            else if (keyHandler.leftPressed) { direction = "LEFT"; spriteRow = 2; isMoving = true; }
+            else if (keyHandler.rightPressed) { direction = "RIGHT"; spriteRow = 3; isMoving = true; }
 
-            if (keyHandler.downPressed) { direction = Direction.DOWN; nextY += speed; }
-            else if (keyHandler.leftPressed) { direction = Direction.LEFT; nextX -= speed; }
-            else if (keyHandler.rightPressed) { direction = Direction.RIGHT; nextX += speed; }
-            else if (keyHandler.upPressed) { direction = Direction.UP; nextY -= speed; }
-
-            if (!checkCollision(nextX, nextY)) {
-                worldX = nextX;
-                worldY = nextY;
+            gamePanel.cChecker.checkTile(this);
+            
+            if (collisionOn == false) {
+                switch(direction) {
+                    case "UP": worldY -= speed; break;
+                    case "DOWN": worldY += speed; break;
+                    case "LEFT": worldX -= speed; break;
+                    case "RIGHT": worldX += speed; break;
+                }
             }
-        }
 
-        if (isMoving) {
             spriteCounter++;
-            if (spriteCounter > 12) { 
-                spriteNum++; 
-                if (spriteNum >= COLS) spriteNum = 0; 
+            if (spriteCounter > 15) {
+                spriteCol = (spriteCol == 1) ? 2 : 1;
                 spriteCounter = 0;
             }
         } else {
-            spriteNum = 0; 
+            spriteCol = 0;
+            spriteCounter = 0;
         }
     }
 
-    private boolean checkCollision(int nextX, int nextY) {
-        int leftTile = (nextX + hitbox.x) / GamePanel.TILE_SIZE;
-        int rightTile = (nextX + hitbox.x + hitbox.width) / GamePanel.TILE_SIZE;
-        int topTile = (nextY + hitbox.y) / GamePanel.TILE_SIZE;
-        int bottomTile = (nextY + hitbox.y + hitbox.height) / GamePanel.TILE_SIZE;
+    public void render(Graphics2D g2d) {
+        // 1. Ambil gambar dari array sprite
+        BufferedImage image = playerSprites[spriteRow][spriteCol];
+        if (playerSprites != null && spriteRow < playerSprites.length && spriteCol < playerSprites[0].length) {
+            image = playerSprites[spriteRow][spriteCol];
+        }
 
-        TileMap tm = gamePanel.getTileMap();
-        return tm.isSolid(topTile, leftTile) || tm.isSolid(topTile, rightTile) ||
-               tm.isSolid(bottomTile, leftTile) || tm.isSolid(bottomTile, rightTile);
+        // 2. Hitung posisi layar
+        int screenX = worldX - gamePanel.getCamera().x;
+        int screenY = worldY - gamePanel.getCamera().y;
+
+        System.out.println("Player World: " + worldX + "," + worldY + 
+                   " | Camera: " + gamePanel.getCamera().x + "," + gamePanel.getCamera().y + 
+                   " | Screen: " + screenX + "," + screenY);
+        
+        // 3. Hanya gambar jika gambar ada
+        if (image != null) {
+            g2d.drawImage(image, screenX, screenY, GamePanel.TILE_SIZE, GamePanel.TILE_SIZE, null);
+        } else {
+            // DEBUG: Jika masuk ke sini, artinya gambarmu belum ter-load!
+            System.out.println("ERROR: Player sprite is NULL! Row: " + spriteRow + " Col: " + spriteCol);
+         }
     }
 
-    @Override
-    public void render(Graphics2D g2d, int cameraX, int cameraY) {
-        int screenX = worldX - cameraX;
-        int screenY = worldY - cameraY;
+    public void loadPosition() {
+        String sql = "SELECT * FROM player_save WHERE id = 1";
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+            if (rs.next()) {
+                this.worldX = GamePanel.TILE_SIZE * 50;
+                this.worldY = GamePanel.TILE_SIZE * 50;
+            }
+        } catch (SQLException e) { e.printStackTrace(); }
+    }
+    
+    public void interact() {
+        OverworldState os = gamePanel.getOverworldState();
+        if (os != null) {
+            int npcIndex = gamePanel.cChecker.checkEntity(this, os.getNPCs());
 
-        if (playerSprites != null && playerSprites[0][spriteNum] != null) {
-            BufferedImage image = playerSprites[0][spriteNum];
-            
-            // AGAR TIDAK GEPENG: 
-            // Kita gambar sesuai ukuran asli potongan gambarnya, 
-            // tapi diskalakan ke TILE_SIZE. 
-            // Jika gambar aslimu tidak kotak (misal 16x20), g2d akan memaksanya jadi kotak TILE_SIZE.
-        g2d.drawImage(image, screenX, screenY, null);        }
+            if (npcIndex != 999) {
+                NPC targetNPC = os.getNPCs()[npcIndex];
+                gamePanel.setCurrentState(new DialogState(gamePanel, targetNPC, gamePanel.getCurrentState()));
+            }
+        }
     }
 }

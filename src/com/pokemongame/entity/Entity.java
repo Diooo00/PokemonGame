@@ -16,28 +16,26 @@ public abstract class Entity {
 
     protected GamePanel gamePanel;
 
-    // Posisi di dunia (world coordinate, bukan layar)
     public int worldX, worldY;
     public int speed;
 
-    // Sprite saat ini yang dirender
-    protected BufferedImage currentSprite;
+    // Variabel untuk Collision & Gerak
+    public String direction = "DOWN";
+    public boolean collisionOn = false;
 
-    // Hitbox untuk collision detection
+    // Hitbox
     public Rectangle hitbox;
     public int hitboxDefaultX, hitboxDefaultY;
 
     public Entity(GamePanel gamePanel) {
         this.gamePanel = gamePanel;
-        // Hitbox default — bisa di-override tiap subclass
         hitbox = new Rectangle(8, 16, 16, 16);
         hitboxDefaultX = hitbox.x;
         hitboxDefaultY = hitbox.y;
     }
 
-    // Wajib diimplementasi — tiap entity punya logika & tampilan sendiri
     public abstract void update();
+    // Gunakan Graphics2D di sini
     public void render(Graphics2D g2d, int cameraX, int cameraY) {
-    // default kosong — subclass override sesuai kebutuhan
     }
 }
