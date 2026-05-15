@@ -16,7 +16,7 @@ public class SpecialMove extends Move {
     private int effectChance; // persen chance efek terjadi
 
     public SpecialMove(String name, int power, int accuracy,
-                       Pokemon.Type type, StatusEffect effect, int effectChance) {
+                       String type, StatusEffect effect, int effectChance) {
         super(name, power, accuracy, type, Category.SPECIAL);
         this.statusEffect = effect;
         this.effectChance = effectChance;

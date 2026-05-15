@@ -25,8 +25,9 @@ public class SpriteLoader {
         }
 
         if (is == null) {
-            System.err.println("Gagal memuat file: " + path);
-            return null;
+            // Kita hilangkan print error di sini supaya tidak spam,
+            // error-nya kita pindah ke loadPokemon saja.
+            return null; 
         }
 
         try {
@@ -37,7 +38,28 @@ public class SpriteLoader {
         }
     }
 
-    public static BufferedImage loadPokemon(String name) {
-        return loadSprite("/pokemon/" + name.toLowerCase() + ".png");
+    public static BufferedImage loadPokemon(int id) {
+        // Kemungkinan 1: Folder 'res' ditaruh di dalam 'src'
+        String path1 = "/res/pokemon/" + id + ".png";
+        BufferedImage img = loadSprite(path1);
+        
+        // Kemungkinan 2: Folder 'res' sejajar dengan 'src' (Source Packages terpisah)
+        if (img == null) {
+            String path2 = "/pokemon/" + id + ".png";
+            img = loadSprite(path2);
+        }
+        
+        // Kemungkinan 3: Tanpa awalan slash sama sekali
+        if (img == null) {
+            String path3 = "res/pokemon/" + id + ".png";
+            img = loadSprite(path3);
+        }
+        
+        // Jika ketiga cara di atas masih gagal
+        if (img == null) {
+            System.err.println("GAGAL LOAD GAMBAR: File '" + id + ".png' tidak ditemukan di folder resources!");
+        }
+        
+        return img;
     }
 }

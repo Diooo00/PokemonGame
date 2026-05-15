@@ -10,7 +10,7 @@ package com.pokemongame.pokemon;
  */
 public class PhysicalMove extends Move {
 
-    public PhysicalMove(String name, int power, int accuracy, Pokemon.Type type) {
+    public PhysicalMove(String name, int power, int accuracy, String type) {
         super(name, power, accuracy, type, Category.PHYSICAL);
     }
 

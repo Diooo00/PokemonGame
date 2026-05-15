@@ -5,10 +5,8 @@
 package com.pokemongame.entity;
 
 import com.pokemongame.main.GamePanel;
-import com.pokemongame.pokemon.FirePokemon;
-import com.pokemongame.pokemon.GrassPokemon;
 import com.pokemongame.pokemon.Pokemon;
-import com.pokemongame.pokemon.WaterPokemon;
+import com.pokemongame.util.SaveManager;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
@@ -40,12 +38,12 @@ public class WildPokemon extends Entity {
     private Pokemon generateRandom() {
         int level = 2 + (int)(Math.random() * 5);
 
-        // Pilih ID Pokemon secara acak (Misal ID 1, 4, atau 7 sesuai SQL yang kita buat tadi)
-        int[] availableIds = {1, 4, 7}; 
+        // Update ID ke Gen 5: 495(Snivy), 498(Tepig), 501(Oshawott)
+        int[] availableIds = {495, 498, 501}; 
         int randomId = availableIds[(int)(Math.random() * availableIds.length)];
 
-        // Panggil method statis yang baru kita buat!
-        return Pokemon.loadFromDB(randomId, level);
+        // SEKARANG MANGGIL DARI SAVEMANAGER
+        return SaveManager.loadPokemonById(randomId, level);
     }
 
     @Override
@@ -53,7 +51,6 @@ public class WildPokemon extends Entity {
         roamTimer++;
 
         if (roamTimer >= roamInterval) {
-            // Pilih arah acak atau berhenti
             int rand = (int)(Math.random() * 5);
             switch (rand) {
                 case 0 -> { roamDirectionX =  0; roamDirectionY = -1; } // atas
@@ -73,19 +70,21 @@ public class WildPokemon extends Entity {
         return pokemonData;
     }
 
-    public void render(Graphics2D g2d) {}
-
     @Override
     public void render(Graphics2D g2d, int cameraX, int cameraY) {
+        if (pokemonData == null) return; // Jaga-jaga kalau gagal load DB
+
         int screenX = worldX - cameraX;
         int screenY = worldY - cameraY;
 
-        // Placeholder — warna sesuai tipe
-        switch (pokemonData.getType()) {
-            case FIRE  -> g2d.setColor(new Color(255, 100, 50));
-            case WATER -> g2d.setColor(new Color(50, 150, 255));
-            case GRASS -> g2d.setColor(new Color(50, 200, 50));
-            default    -> g2d.setColor(Color.GRAY);
+        // SWITCH MENGGUNAKAN STRING (Pake tanda kutip)
+        String type = pokemonData.getType1().toUpperCase(); 
+        
+        switch (type) {
+            case "FIRE"  -> g2d.setColor(new Color(255, 100, 50));
+            case "WATER" -> g2d.setColor(new Color(50, 150, 255));
+            case "GRASS" -> g2d.setColor(new Color(50, 200, 50));
+            default      -> g2d.setColor(Color.GRAY);
         }
 
         g2d.fillOval(screenX + 4, screenY + 4,

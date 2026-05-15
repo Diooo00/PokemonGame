@@ -91,18 +91,38 @@ public class GamePanel extends JPanel {
         }
     }
 
+    // Tentukan resolusi dasar desainmu (misal 800x600)
+    public final int DESAIN_WIDTH = 1920;
+    public final int DESAIN_HEIGHT = 1150;
+
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
-        Graphics2D g2d = (Graphics2D) g;
-        
-        g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+        Graphics2D g2 = (Graphics2D) g;
 
+        // --- LOGIKA SKALA DINAMIS ---
+        // Ambil ukuran jendela saat ini (setelah di-maximize atau ditarik)
+        double windowWidth = this.getWidth();
+        double windowHeight = this.getHeight();
+
+        // Hitung berapa kali lipat harus diperbesar
+        double scaleX = windowWidth / DESAIN_WIDTH;
+        double scaleY = windowHeight / DESAIN_HEIGHT;
+
+        // Opsional: Jika ingin aspect ratio tetep (nggak penyet kalau ditarik asal)
+        // double scale = Math.min(scaleX, scaleY);
+        // g2.scale(scale, scale);
+
+        // Jika ingin memenuhi layar (stretch):
+        g2.scale(scaleX, scaleY);
+        // ----------------------------
+
+        // Render game kamu
         if (currentState != null) {
-            currentState.render(g2d);
+            currentState.render(g2);
         }
 
-        g2d.dispose();
+        g2.dispose();
     }
 
     public OverworldState getOverworldState() {

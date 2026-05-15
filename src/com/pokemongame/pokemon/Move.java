@@ -9,22 +9,35 @@ package com.pokemongame.pokemon;
  *
  * @author thety
  */
-public abstract class Move {
+public class Move {
 
     protected String name;
     protected int power;
     protected int accuracy; // 0-100
-    protected Pokemon.Type type;
+    protected String type;  // Diubah dari Enum ke String
 
     public enum Category { PHYSICAL, SPECIAL }
     protected Category category;
 
-    public Move(String name, int power, int accuracy,
-                Pokemon.Type type, Category category) {
-        this.name     = name;
-        this.power    = power;
+    /**
+     * CONSTRUCTOR UTAMA: Digunakan oleh SaveManager untuk memuat jurus dari Database.
+     */
+    public Move(String name, String type, int power, int accuracy) {
+        this.name = name;
+        this.type = type.toUpperCase();
+        this.power = power;
         this.accuracy = accuracy;
-        this.type     = type;
+        this.category = Category.PHYSICAL; // Default category
+    }
+
+    /**
+     * CONSTRUCTOR LENGKAP: Jika kamu ingin menentukan kategori secara manual.
+     */
+    public Move(String name, int power, int accuracy, String type, Category category) {
+        this.name = name;
+        this.power = power;
+        this.accuracy = accuracy;
+        this.type = type.toUpperCase();
         this.category = category;
     }
 
@@ -33,19 +46,18 @@ public abstract class Move {
         return Math.random() * 100 < accuracy;
     }
 
-    // Efek tambahan opsional — subclass bisa override
+    // Efek tambahan opsional
     public void applyEffect(Pokemon user, Pokemon target) {
-        // default: tidak ada efek tambahan
+        // Bisa di-override di subclass jika perlu
     }
 
-    // Getters
-    public String getName()       { return name; }
-    public int getPower()         { return power; }
-    public int getAccuracy()      { return accuracy; }
-    public Pokemon.Type getType() { return type; }
+    // --- GETTERS ---
+    public String getName()     { return name; }
+    public int getPower()       { return power; }
+    public int getAccuracy()    { return accuracy; }
+    public String getType()     { return type; } // Mengembalikan String (FIRE, WATER, dll)
     public Category getCategory() { return category; }
 
     @Override
     public String toString() { return name; }
 }
-

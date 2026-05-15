@@ -9,6 +9,7 @@ import com.pokemongame.entity.Player;
 import com.pokemongame.input.KeyHandler;
 import com.pokemongame.main.GamePanel;
 import com.pokemongame.pokemon.Pokemon;
+import com.pokemongame.util.SaveManager;
 import com.pokemongame.world.Camera;
 import com.pokemongame.world.TileMap;
 import java.awt.AlphaComposite;
@@ -95,13 +96,30 @@ public class OverworldState extends GameState {
         keyHandler.leftPressed = false;
         keyHandler.rightPressed = false;
 
-        // 2. Siapkan data Pokemon yang mau diadu (simpan di variabel class)
-        int[] ids = {1, 4, 7};
+        // 2. Tentukan ID Pokemon Liar (Gen 5: Snivy, Tepig, Oshawott)
+        int[] ids = {495, 498, 501}; 
         int randomId = ids[(int)(Math.random() * ids.length)];
-        pendingWildPokemon = Pokemon.loadFromDB(randomId, 3);
-        pendingPlayerActive = Pokemon.loadFromDB(4, 5); 
+        pendingWildPokemon = SaveManager.loadPokemonById(randomId, 3);
 
-        // 3. MULAI ANIMASI (Jangan pindah state dulu!)
+        // 3. Ambil Pokemon milik Player
+        // Kita coba ambil dari database player_pokemon dulu
+        java.util.List<Pokemon> party = SaveManager.loadPlayerParty();
+
+        if (!party.isEmpty()) {
+            pendingPlayerActive = party.get(0); // Ambil Pokemon pertama di tim
+        } else {
+            // JIKA DB KOSONG: Kita paksa load satu starter (misal Tepig ID 498)
+            // Ini sebagai "Jaring Pengaman" biar gak NullPointerException
+            pendingPlayerActive = SaveManager.loadPokemonById(498, 5);
+        }
+
+        // 4. Cek Keamanan: Jika masih null (misal DB error), jangan pindah state!
+        if (pendingPlayerActive == null || pendingWildPokemon == null) {
+            System.err.println("ERROR: Gagal memuat data Pokemon dari Database!");
+            return; 
+        }
+
+        // 5. MULAI ANIMASI
         this.isTransitioning = true;
         this.transitionCounter = 0;
     }

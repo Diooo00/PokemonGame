@@ -10,23 +10,27 @@ import javax.swing.JFrame;
  *
  * @author thety
  */
-public class GameWindow {
-    private JFrame frame;
-    private GamePanel gamePanel;
+public class GameWindow extends JFrame {
+    
+    private GamePanel gp;
 
     public GameWindow() {
-        frame = new JFrame("Pokemon Game");
-        gamePanel = new GamePanel();
+        gp = new GamePanel();
+        
+        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        this.setResizable(true);
+        this.setTitle("Pokemon Game");
 
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setResizable(false);
-        frame.add(gamePanel);
-        frame.pack();
-        frame.setLocationRelativeTo(null);
-        frame.setVisible(true);
+        // --- FITUR FULLSCREEN ---
+        this.setExtendedState(JFrame.MAXIMIZED_BOTH); 
+
+        this.add(gp);
+        this.pack();
+        this.setLocationRelativeTo(null);
+        this.setVisible(true);
     }
 
     public void startGame() {
-        gamePanel.startGameLoop();
+        gp.startGameLoop();
     }
 }
