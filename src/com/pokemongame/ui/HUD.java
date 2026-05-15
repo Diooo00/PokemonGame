@@ -5,12 +5,15 @@
 package com.pokemongame.ui;
 
 import com.pokemongame.main.GamePanel;
+import com.pokemongame.pokemon.Move;
 import com.pokemongame.pokemon.Pokemon;
+import java.awt.BasicStroke;
 
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints; 
+import java.util.List;
 /**
  *
  * @author thety
@@ -71,28 +74,55 @@ public class HUD {
     }
 
     // Render menu aksi battle (Fight / Run)
-    public void renderBattleMenu(Graphics2D g2d, String[] options, int selectedIndex) {
-        int menuX = GamePanel.SCREEN_WIDTH  - 220;
-        int menuY = GamePanel.SCREEN_HEIGHT - 110;
-        int menuW = 200, menuH = 90;
+    public void renderMoveMenu(Graphics2D g2d, List<Move> moves, int selectedMove) {
+        int x = 20;
+        int y = GamePanel.SCREEN_HEIGHT - 130;
+        int width = GamePanel.SCREEN_WIDTH - 40;
+        int height = 110;
 
-        g2d.setColor(new Color(30, 30, 30, 220));
-        g2d.fillRoundRect(menuX, menuY, menuW, menuH, 10, 10);
+        // Background kotak jurus
+        g2d.setColor(new Color(30, 30, 30, 240));
+        g2d.fillRoundRect(x, y, width, height, 15, 15);
+        
+        // Border
         g2d.setColor(Color.WHITE);
-        g2d.drawRoundRect(menuX, menuY, menuW, menuH, 10, 10);
+        g2d.setStroke(new BasicStroke(3));
+        g2d.drawRoundRect(x, y, width, height, 15, 15);
 
-        g2d.setFont(new Font("Arial", Font.PLAIN, 13));
+        g2d.setFont(new Font("Monospaced", Font.BOLD, 20));
 
-        for (int i = 0; i < options.length; i++) {
-            int optX = menuX + 20 + (i % 2) * 90;
-            int optY = menuY + 30 + (i / 2) * 30;
+        for (int i = 0; i < moves.size(); i++) {
+            // Logika Grid 2x2
+            int moveX = (i % 2 == 0) ? x + 50 : x + 300;
+            int moveY = (i < 2) ? y + 45 : y + 85;
 
-            if (i == selectedIndex) {
+            if (i == selectedMove) {
                 g2d.setColor(Color.YELLOW);
-                g2d.drawString("▶ " + options[i], optX - 14, optY);
+                g2d.drawString("> " + moves.get(i).getName(), moveX - 30, moveY);
             } else {
                 g2d.setColor(Color.WHITE);
-                g2d.drawString(options[i], optX, optY);
+                g2d.drawString(moves.get(i).getName(), moveX, moveY);
+            }
+        }
+    }
+    
+    public void renderBattleMenu(Graphics2D g2d, String[] options, int selected) {
+        int width = 200, height = 100;
+        int x = GamePanel.SCREEN_WIDTH - width - 20;
+        int y = GamePanel.SCREEN_HEIGHT - height - 20;
+
+        g2d.setColor(new Color(30, 30, 30, 240));
+        g2d.fillRoundRect(x, y, width, height, 15, 15);
+        g2d.setColor(Color.WHITE);
+        g2d.drawRoundRect(x, y, width, height, 15, 15);
+
+        g2d.setFont(new Font("Arial", Font.BOLD, 22));
+        for (int i = 0; i < options.length; i++) {
+            int textY = y + 40 + (i * 40);
+            if (i == selected) {
+                g2d.drawString("> " + options[i], x + 30, textY);
+            } else {
+                g2d.drawString(options[i], x + 50, textY);
             }
         }
     }

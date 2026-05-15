@@ -21,6 +21,7 @@ public class KeyHandler implements KeyListener {
     }
     
     public boolean actionPressed;
+    public boolean backPressed;   
     
     @Override
     public void keyTyped(KeyEvent e) {
@@ -47,7 +48,10 @@ public class KeyHandler implements KeyListener {
         // Tombol D atau Panah Kanan
         if (code == KeyEvent.VK_D || code == KeyEvent.VK_RIGHT) { rightPressed = true; }
         
-        
+        // Tombol Pilih (Enter atau Z)
+        if (code == KeyEvent.VK_ENTER || code == KeyEvent.VK_Z) { actionPressed = true; }
+        // Tombol Kembali (Escape atau X) - TAMBAHKAN INI
+        if (code == KeyEvent.VK_ESCAPE || code == KeyEvent.VK_X) { backPressed = true; }
     }
 
     @Override

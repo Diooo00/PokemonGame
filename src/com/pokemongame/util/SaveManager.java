@@ -40,6 +40,30 @@ public class SaveManager {
         }
     }
 
+    public static void savePokemonStatus(Pokemon p) {
+        // Kita gunakan player_id = 1 untuk slot save pertama
+        String sql = "UPDATE player_pokemon SET level = ?, current_hp = ?, exp = ? " +
+                     "WHERE player_id = 1 AND poke_id = ?";
+
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            if (conn == null) return;
+
+            ps.setInt(1, p.getLevel());
+            ps.setInt(2, p.getCurrentHp());
+            ps.setInt(3, p.getExp());    // Pastikan ada getter getExp() di Pokemon.java
+            ps.setInt(4, p.getPokeId()); // Pastikan ada getter getPokeId() di Pokemon.java
+
+            ps.executeUpdate();
+            System.out.println("Status " + p.getName() + " berhasil di-update di database!");
+
+        } catch (SQLException e) {
+            System.err.println("Gagal update status Pokemon!");
+            e.printStackTrace();
+        }
+    }
+
     /**
      * Memuat data Pokemon tim Player dari database
      * Digunakan saat game pertama kali dijalankan

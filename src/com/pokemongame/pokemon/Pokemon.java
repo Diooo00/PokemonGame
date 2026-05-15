@@ -18,6 +18,8 @@ public class Pokemon {
     protected String name;
     protected int level;
     protected int pokeId;
+    protected int exp = 0;
+    protected int expToNextLevel = 100;
 
     // Stats
     protected int maxHp;
@@ -98,10 +100,6 @@ public class Pokemon {
         if (this.type == Type.GRASS) this.addMove(new SpecialMove("Vine Whip", 45, 100, Type.GRASS, SpecialMove.StatusEffect.NONE, 0));
     }
 
-    /**
-     * PENGGANTI SUBCLASS: Logika Special Ability sekarang ada di sini.
-     * Tidak perlu FirePokemon.java lagi, cukup cek tipe-nya saja.
-     */
     public void useSpecialAbility() {
         if (currentHp < maxHp / 3) {
             switch (this.type) {
@@ -133,6 +131,51 @@ public class Pokemon {
         return 1.0;
     }
 
+    public void loadMovesFromDB() {
+        this.moves.clear();
+        String sql = "SELECT m.* FROM moves_base m " +
+                     "JOIN pokemon_moves pm ON m.move_id = pm.move_id " +
+                     "WHERE pm.poke_id = ? AND pm.level_learned <= ?";
+
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, this.pokeId);
+            ps.setInt(2, this.level);
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+                String cat = rs.getString("category");
+                Move move;
+                if (cat.equals("PHYSICAL")) {
+                    move = new PhysicalMove(rs.getString("name"), rs.getInt("power"), rs.getInt("accuracy"), Type.valueOf(rs.getString("type")));
+                } else {
+                    move = new SpecialMove(rs.getString("name"), rs.getInt("power"), rs.getInt("accuracy"), Type.valueOf(rs.getString("type")), SpecialMove.StatusEffect.NONE, 0);
+                }
+                addMove(move);
+            }
+        } catch (SQLException e) { e.printStackTrace(); }
+    }
+
+    // Fungsi EXP (Opsi 3)
+    public boolean gainExp(int amount) {
+        this.exp += amount;
+        if (this.exp >= expToNextLevel) {
+            levelUp();
+            return true;
+        }
+        return false;
+    }
+
+    private void levelUp() {
+        this.level++;
+        this.maxHp += 5;
+        this.currentHp = maxHp;
+        this.attack += 2;
+        this.exp = 0;
+        this.expToNextLevel += 50;
+        System.out.println(name + " leveled up to " + level + "!");
+    }
+    
     public void addMove(Move move) {
         if (moves.size() < 4) moves.add(move);
     }
@@ -166,10 +209,21 @@ public class Pokemon {
         // Kamu bisa menyesuaikan pembaginya (10.0) untuk menyeimbangkan (balancing) game
         return (int) ((this.attack * move.getPower()) / 10.0);
     } 
-
+    
+    public void setCurrentHp(int currentHp) {
+        this.currentHp = currentHp;
+    }
+    
     public boolean isFainted() { return currentHp <= 0; }
 
     // Getters
+    public int getExp() {
+        return exp;
+    }
+    
+    public int getPokeId() {
+        return pokeId; 
+    }
     public String getName()     { return name; }
     public int getLevel()       { return level; }
     public int getCurrentHp()   { return currentHp; }
