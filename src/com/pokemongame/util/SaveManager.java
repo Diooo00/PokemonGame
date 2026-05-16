@@ -81,6 +81,29 @@ public class SaveManager {
         }
     }
 
+    // Fungsi baru untuk mengundi 1 ID Pokemon secara acak dari database
+    public static int getRandomPokemonId() {
+        int randomId = 495; // Default Snivy (buat jaga-jaga kalau koneksi terputus)
+        
+        // Perintah SQL ini mengocok seluruh isi tabel dan hanya mengambil 1 baris teratas
+        String sql = "SELECT poke_id FROM pokemon_base ORDER BY RAND() LIMIT 1";
+
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
+
+            // Jika database terhubung dan ada isinya
+            if (conn != null && rs.next()) {
+                randomId = rs.getInt("poke_id"); // Ambil ID pemenangnya
+            }
+        } catch (SQLException e) {
+            System.err.println("EROR: Gagal mengambil ID Pokemon acak dari database!");
+            e.printStackTrace();
+        }
+        
+        return randomId;
+    }
+    
     public static void saveGame(Player player) {
         String sql = "UPDATE player_save SET world_x = ?, world_y = ? WHERE id = 1";
         try (Connection conn = DatabaseManager.getConnection();
@@ -158,5 +181,22 @@ public class SaveManager {
         }
 
         return items;
+    }
+    
+    public static boolean catchPokemon(int pokeId, int level, int currentHp) {
+        String sql = "INSERT INTO player_pokemon (player_id, poke_id, level, current_hp, exp) VALUES (1, ?, ?, ?, 0)";
+        try (Connection conn = DatabaseManager.getConnection()) {
+            if (conn == null) return false;
+            try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setInt(1, pokeId);
+                ps.setInt(2, level);
+                ps.setInt(3, currentHp);
+                ps.executeUpdate();
+                return true;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
     }
 }

@@ -14,6 +14,7 @@ import com.pokemongame.world.Camera;
 import com.pokemongame.world.TileMap;
 import java.awt.AlphaComposite;
 import java.awt.Color;
+import java.awt.Font;
 
 import java.awt.Graphics2D;
 
@@ -41,6 +42,7 @@ public class OverworldState extends GameState {
         keyHandler = gamePanel.getKeyHandler();
         player    = new Player(gamePanel, keyHandler);     
         this.camera = gamePanel.getCamera();
+        gamePanel.playMusic("res/sound/overworld.wav");
         setupNPCs();
     }
     
@@ -48,23 +50,48 @@ public class OverworldState extends GameState {
     public void update() {
         if (isTransitioning) {
             transitionCounter++;
-
-            // JIKA SUDAH 5 DETIK (300 Frame), BARU PINDAH!
             if (transitionCounter >= MAX_TRANSITION_TIME) {
-                isTransitioning = false; // Reset saklar
-
-                // PINDAH KE BATTLE SEKARANG
+                isTransitioning = false;
                 BattleState battle = new BattleState(gamePanel, pendingPlayerActive, pendingWildPokemon, this);
                 gamePanel.setCurrentState(battle);
             }
-            return; // Selama transisi, jangan jalanin logika gerak player di bawah
+            return;
         }
 
-        // Logika normal Overworld
         if (player != null) {
             player.update();
             camera.update(player);
             checkWildEncounter();
+            
+            // 1. FITUR SAVE GAME OTOMATIS (Jika player menekan tombol Back/Escape)
+            if (keyHandler.backPressed) {
+                keyHandler.backPressed = false;
+                SaveManager.saveGame(player);
+                System.out.println("Game koordinat berhasil disimpan ke Database!");
+            }
+            
+            // 2. FITUR DIALOG NPC (Jika menekan tombol Action dekat NPC)
+            if (keyHandler.actionPressed) {
+                keyHandler.actionPressed = false;
+                checkNPCDialogInteraction();
+            }
+        }
+    }
+    
+    private void checkNPCDialogInteraction() {
+        for (NPC npc : npcs) {
+            if (npc != null) {
+                // Hitung jarak matematika absolut antara koordinat Player dan NPC
+                int diffX = Math.abs(player.worldX - npc.worldX);
+                int diffY = Math.abs(player.worldY - npc.worldY);
+                
+                // Jika jarak dekat (radius 1 ubin / TILE_SIZE)
+                if (diffX <= GamePanel.TILE_SIZE && diffY <= GamePanel.TILE_SIZE) {
+                    // Picu fungsi bicara milik NPC kamu
+                    npc.speak(); 
+                    break;
+                }
+            }
         }
     }
 
@@ -96,32 +123,42 @@ public class OverworldState extends GameState {
         keyHandler.leftPressed = false;
         keyHandler.rightPressed = false;
 
-        // 2. Tentukan ID Pokemon Liar (Gen 5: Snivy, Tepig, Oshawott)
-        int[] ids = {495, 498, 501}; 
-        int randomId = ids[(int)(Math.random() * ids.length)];
-        pendingWildPokemon = SaveManager.loadPokemonById(randomId, 3);
+        // 2. SISTEM ENCOUNTER DINAMIS: Ambil ID Pokemon liar acak dari Database
+        int randomId = SaveManager.getRandomPokemonId();
+        
+        // Bikin level musuhnya bervariasi (misal Level 2 sampai 5)
+        int randomLevel = 2 + (int)(Math.random() * 4); 
+        
+        // Panggil fungsi andalanmu untuk memuat Pokemon lengkap dengan jurusnya!
+        pendingWildPokemon = SaveManager.loadPokemonById(randomId, randomLevel);
 
         // 3. Ambil Pokemon milik Player
-        // Kita coba ambil dari database player_pokemon dulu
         java.util.List<Pokemon> party = SaveManager.loadPlayerParty();
-
         if (!party.isEmpty()) {
-            pendingPlayerActive = party.get(0); // Ambil Pokemon pertama di tim
+            pendingPlayerActive = null;
+            // Cari pokemon di tim yang HP-nya belum 0 untuk maju duluan
+            for (Pokemon p : party) {
+                if (p.getCurrentHp() > 0) {
+                    pendingPlayerActive = p;
+                    break;
+                }
+            }
+            // Kalau amit-amit mati semua, paksa panggil yang pertama (nanti otomatis kalah di BattleState)
+            if (pendingPlayerActive == null) {
+                pendingPlayerActive = party.get(0);
+            }
         } else {
-            // JIKA DB KOSONG: Kita paksa load satu starter (misal Tepig ID 498)
-            // Ini sebagai "Jaring Pengaman" biar gak NullPointerException
-            pendingPlayerActive = SaveManager.loadPokemonById(498, 5);
+            // JIKA DB PLAYER KOSONG: Paksa muat Pikachu (ID 25) sebagai cadangan
+            pendingPlayerActive = SaveManager.loadPokemonById(25, 5); 
+            if(pendingPlayerActive == null){
+                 // Kalau Pikachu nggak ada di db, pakai Snivy
+                 pendingPlayerActive = SaveManager.loadPokemonById(495, 5);
+            }
         }
 
-        // 4. Cek Keamanan: Jika masih null (misal DB error), jangan pindah state!
-        if (pendingPlayerActive == null || pendingWildPokemon == null) {
-            System.err.println("ERROR: Gagal memuat data Pokemon dari Database!");
-            return; 
-        }
-
-        // 5. MULAI ANIMASI
-        this.isTransitioning = true;
-        this.transitionCounter = 0;
+        // Mulai efek layar kedap-kedip transisi
+        isTransitioning = true;
+        transitionCounter = 0;
     }
 
     public Player getPlayer() {
@@ -130,16 +167,21 @@ public class OverworldState extends GameState {
 
     @Override
     public void render(Graphics2D g2d) {
-        // 1. Render Map & Player
-        tileMap.render(g2d, camera.x, camera.y);
+        // 1. Render Map Background (Tanah, rumput dasar, batang pohon bawah)
+        tileMap.renderBackground(g2d, camera.x, camera.y);
+        
+        // 2. Render Player (Karakter berjalan di atas background)
         if (player != null) player.render(g2d);
+        
+        // 3. Render Map Foreground (Daun rimbun/pucuk pohon otomatis menimpa kepala player)
+        tileMap.renderForeground(g2d, camera.x, camera.y);
 
+        // 4. Efek Transisi Masuk Battle (Blinking Flash & Fade Out)
         if (isTransitioning) {
             // --- LOGIKA PULSA AMAN (0 - 2.5 Detik / Frame 0-150) ---
             if (transitionCounter < 150) {
                 // Kita gunakan fungsi Sinus untuk membuat efek "napas" atau pulsa yang halus
-                // Math.sin bakal menghasilkan gelombang naik turun yang smooth
-                double speed = (transitionCounter < 60) ? 0.1 : 0.3; // Makin lama makin cepet dikit
+                double speed = (transitionCounter < 60) ? 0.1 : 0.3; 
                 float alpha = (float) (Math.abs(Math.sin(transitionCounter * speed)) * 0.5f); 
 
                 // Batasi alpha maksimal 0.7f biar nggak terlalu gelap mendadak
@@ -150,7 +192,7 @@ public class OverworldState extends GameState {
                 g2d.fillRect(0, 0, GamePanel.SCREEN_WIDTH, GamePanel.SCREEN_HEIGHT);
                 g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1f));
 
-                // Efek getar tipis saja (opsional)
+                // Efek getar layar
                 applyScreenShake(g2d, (transitionCounter < 60) ? 2 : 5);
             } 
 
@@ -164,6 +206,26 @@ public class OverworldState extends GameState {
                 g2d.fillRect(0, 0, GamePanel.SCREEN_WIDTH, GamePanel.SCREEN_HEIGHT);
                 g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1f));
             }
+
+            // =========================================================================
+            // --- TAMBAHAN: TAMPILKAN KOTAK DIALOG NOTIFIKASI DI LAYAR OVERWORLD ---
+            // =========================================================================
+            int bottomY = GamePanel.SCREEN_HEIGHT - 130;
+            int boxX = 20;
+            int boxW = GamePanel.SCREEN_WIDTH - 40;
+
+            // 1. Gambar Kotak Dialog Hitam Transparan (Sama persis seperti gaya BattleState)
+            g2d.setColor(new Color(25, 25, 25, 240)); // Hitam pekat tapi agak transparan dikit
+            g2d.fillRoundRect(boxX, bottomY, boxW, 110, 15, 15);
+            
+            // 2. Gambar Border Putih di pinggir kotak
+            g2d.setColor(Color.WHITE);
+            g2d.setStroke(new java.awt.BasicStroke(3));
+            g2d.drawRoundRect(boxX, bottomY, boxW, 110, 15, 15);
+
+            // 3. Gambar Teks Pengumuman di dalam kotak
+            g2d.setFont(new Font("Monospaced", Font.BOLD, 18)); // Pakai font tebal bawaan Java biar aman
+            g2d.drawString("A wild Pokémon appeared...!", boxX + 40, bottomY + 65);
         }
     }
 

@@ -12,6 +12,7 @@ import com.pokemongame.ui.HUD;
 import com.pokemongame.util.SaveManager;
 import com.pokemongame.util.SpriteLoader;
 import com.pokemongame.item.Item;
+import java.awt.AlphaComposite;
 
 import java.awt.GraphicsEnvironment;
 import java.awt.RenderingHints;
@@ -21,7 +22,6 @@ import java.awt.Graphics2D;
 import java.util.List;
 
 import java.io.File;
-
 
 /**
  *
@@ -42,14 +42,34 @@ public class BattleState extends GameState {
     private KeyHandler keyHandler;
     private HUD hud;
     private GameState previousState;
+    private Move playerChosenMove = null;
+    private int turnStep = 0;
+    private boolean playerGoesFirst = true;
+    private boolean isExiting = false;
+    private int exitCounter = 0;
+    private final int MAX_EXIT_TIME = 60;
+    
+    // --- VARIABEL ANIMASI SLIDE MASUK ---
+    private int introCounter = 0;
+    private final int MAX_INTRO_TIME = 45;
 
-    // --- DATA DINAMIS ---
+    // --- DATA TIM & TAS DARI DATABASE ---
     private String[] menuOptions = {"Fight", "Bag", "Pokemon", "Run"};
     private int selectedOption = 0;
     private int selectedMove = 0;
     
     private List<Item> inventory; 
     private int selectedItem = 0;
+    
+    private List<Pokemon> playerParty; 
+    private int selectedPartyIndex = 0;
+
+    // --- PENGAMAN LOGIKA GANTI POKEMON & BATAS KEMATIAN ---
+    private boolean waitingForFaintSwitch = false; 
+    private boolean justSwitched = false;          
+    private boolean blockSwitching = false;        
+    private boolean isFaintHandled = false;
+    private int faintsInThisBattle = 0; // Penghitung 3 kali mati
 
     private String battleMessage = "";
     private int messageTimer = 0;
@@ -57,20 +77,36 @@ public class BattleState extends GameState {
 
     public BattleState(GamePanel gp, Pokemon playerP, Pokemon enemyP, GameState previousState) {
         super(gp);
-        this.playerPokemon = playerP;
         this.enemyPokemon = enemyP;
         this.previousState = previousState;
         this.keyHandler = gp.getKeyHandler();
         this.hud = new HUD();
+        gp.playMusic("res/sound/battle.wav");
 
-        // 1. Load Inventory dari SaveManager (DB)
         this.inventory = SaveManager.loadPlayerItems();
-
-        if (this.playerPokemon.getCurrentHp() <= 0) {
-            this.playerPokemon.setCurrentHp(this.playerPokemon.getMaxHp()); 
+        this.playerParty = SaveManager.loadPlayerParty(); 
+        
+        if(this.playerParty.isEmpty()){
+            this.playerParty.add(playerP);
         }
 
-        // 2. Load Font
+        // --- FIX BUG KAGEBUNSHIN / IMMORTAL ---
+        // Kita tidak memakai 'playerP' bawaan. Kita paksa ambil Pokemon dari dalam 'playerParty'
+        // supaya HP yang berkurang di pertarungan adalah HP yang sama persis dengan yang di-save ke Database!
+        this.playerPokemon = null;
+        for (Pokemon p : this.playerParty) {
+            if (p.getCurrentHp() > 0) {
+                this.playerPokemon = p; // Ambil pokemon pertama yang masih hidup
+                break;
+            }
+        }
+        // Kalau apes mati semua (harusnya ditolak dari Overworld), paksa ambil yang pertama
+        if (this.playerPokemon == null) {
+            this.playerPokemon = this.playerParty.get(0);
+        }
+        
+        // (Baris kode auto-heal yang bikin immortal sebelumnya SUDAH SAYA HANGUSKAN DARI SINI)
+
         try {
             File fontFile = new File("res/font/PKMN RBYGSC.ttf"); 
             this.pokemonFont = Font.createFont(Font.TRUETYPE_FONT, fontFile).deriveFont(20f);
@@ -83,10 +119,33 @@ public class BattleState extends GameState {
         this.battleMessage = "A wild " + enemyP.getName() + " appeared!";
         this.messageTimer = MESSAGE_DURATION;
         this.subState = SubState.MESSAGE_ONLY;
+        
+        this.introCounter = 0; 
+    }
+
+    // --- METHOD BARU: PENYELAMAT DATA HP KE DATABASE ---
+    private void savePartyToDatabase() {
+        for(Pokemon p : playerParty) {
+            SaveManager.savePokemonStatus(p);
+        }
     }
 
     @Override
     public void update() {
+        if (introCounter < MAX_INTRO_TIME) {
+            introCounter++;
+            return; 
+        }
+
+        if (isExiting) {
+            exitCounter++;
+            if (exitCounter >= MAX_EXIT_TIME) {
+                gamePanel.setCurrentState(previousState);
+                gamePanel.playMusic("res/sound/overworld.wav");
+            }
+            return; 
+        }
+        
         if (shakeTimer > 0) shakeTimer--;
 
         if (messageTimer > 0) {
@@ -95,43 +154,84 @@ public class BattleState extends GameState {
             return;
         }
 
-        if (phase == Phase.PLAYER_TURN) {
+        if (turnStep == 0 && phase != Phase.BATTLE_END) {
             switch (subState) {
                 case MAIN_MENU: handleMainMenu(); break;
                 case MOVE_SELECTION: handleMoveSelection(); break;
                 case BAG: handleBagInput(); break;
                 case POKEMON: handlePartyInput(); break;
             }
-        } else if (phase == Phase.ENEMY_TURN) {
-            handleEnemyTurn();
         }
     }
 
     private void processMessageEnd() {
         battleMessage = ""; 
+
         if (phase == Phase.BATTLE_END) {
-            gamePanel.setCurrentState(previousState);
+            isExiting = true;
             return; 
         }
-        if (enemyPokemon.isFainted()) {
-            handleVictory();
-            return;
-        } 
-        if (playerPokemon.isFainted()) {
-            phase = Phase.BATTLE_END;
-            messageTimer = MESSAGE_DURATION;
+
+        if (waitingForFaintSwitch) {
+            waitingForFaintSwitch = false;
+            turnStep = 0; 
+            phase = Phase.PLAYER_TURN; 
+            changeSubState(SubState.POKEMON);
             return;
         }
 
-        if (phase == Phase.ENEMY_TURN) {
-            phase = Phase.PLAYER_TURN;
+        if (justSwitched) {
+            justSwitched = false;
             changeSubState(SubState.MAIN_MENU);
-        } else if (phase == Phase.PLAYER_TURN) {
-            if (subState == SubState.MESSAGE_ONLY) {
-                changeSubState(SubState.MAIN_MENU);
-            } else {
-                phase = Phase.ENEMY_TURN;
+            return;
+        }
+
+        if (enemyPokemon.isFainted()) {
+            handleVictory(); 
+            return;
+        } 
+        
+        // --- SOLUSI BATAS 3 KEMATIAN ---
+        if (playerPokemon.isFainted() && !isFaintHandled) {
+            isFaintHandled = true; 
+            faintsInThisBattle++;
+
+            boolean hasAlivePokemon = false;
+            for(Pokemon p : playerParty) {
+                if(!p.isFainted()) {
+                    hasAlivePokemon = true;
+                    break;
+                }
             }
+            
+            if (faintsInThisBattle >= 3) {
+                battleMessage = "3 of your Pokémon fainted! You blacked out...";
+                messageTimer = MESSAGE_DURATION;
+                phase = Phase.BATTLE_END; 
+                savePartyToDatabase(); // Wajib save HP pas mati!
+                return;
+            } else if (hasAlivePokemon) {
+                battleMessage = playerPokemon.getName() + " fainted! Choose another Pokémon!";
+                messageTimer = 60;
+                waitingForFaintSwitch = true; 
+                return;
+            } else {
+                battleMessage = playerPokemon.getName() + " fainted! You blacked out...";
+                messageTimer = MESSAGE_DURATION;
+                phase = Phase.BATTLE_END; 
+                savePartyToDatabase(); // Wajib save HP pas mati!
+                return;
+            }
+        }
+
+        if (turnStep == 1) {
+            turnStep = 2; 
+            executeNextAttack();
+        } else {
+            turnStep = 0;
+            playerChosenMove = null;
+            blockSwitching = false; 
+            changeSubState(SubState.MAIN_MENU);
         }
     }
 
@@ -145,25 +245,108 @@ public class BattleState extends GameState {
             keyHandler.actionPressed = false;
             if (selectedOption == 0) changeSubState(SubState.MOVE_SELECTION);
             else if (selectedOption == 1) changeSubState(SubState.BAG);
-            else if (selectedOption == 2) changeSubState(SubState.POKEMON);
+            else if (selectedOption == 2) {
+                if (blockSwitching) {
+                    battleMessage = "You already switched this turn!";
+                    messageTimer = 60;
+                    subState = SubState.MESSAGE_ONLY;
+                } else {
+                    changeSubState(SubState.POKEMON);
+                }
+            }
             else if (selectedOption == 3) flee();
         }
     }
 
     private void handleMoveSelection() {
         int moveCount = playerPokemon.getMoves().size();
-        if (keyHandler.upPressed && selectedMove >= 2) { selectedMove -= 2; keyHandler.upPressed = false; }
-        if (keyHandler.downPressed && selectedMove <= 1 && (selectedMove + 2) < moveCount) { selectedMove += 2; keyHandler.downPressed = false; }
-        if (keyHandler.leftPressed && selectedMove % 2 != 0) { selectedMove -= 1; keyHandler.leftPressed = false; }
-        if (keyHandler.rightPressed && selectedMove % 2 == 0 && (selectedMove + 1) < moveCount) { selectedMove += 1; keyHandler.rightPressed = false; }
+        if (moveCount == 0) {
+            if (keyHandler.backPressed) changeSubState(SubState.MAIN_MENU);
+            return;
+        }
+
+        if (keyHandler.upPressed) {
+            keyHandler.upPressed = false;
+            if (selectedMove >= 2) {
+                selectedMove -= 2;
+            }
+        }
+        if (keyHandler.downPressed) {
+            keyHandler.downPressed = false;
+            if (selectedMove + 2 < moveCount) {
+                selectedMove += 2;
+            }
+        }
+        if (keyHandler.leftPressed) {
+            keyHandler.leftPressed = false;
+            if (selectedMove % 2 != 0) {
+                selectedMove -= 1;
+            }
+        }
+        if (keyHandler.rightPressed) {
+            keyHandler.rightPressed = false;
+            if (selectedMove % 2 == 0 && selectedMove + 1 < moveCount) {
+                selectedMove += 1;
+            }
+        }
 
         if (keyHandler.actionPressed) {
             keyHandler.actionPressed = false;
-            executePlayerTurn(playerPokemon.getMove(selectedMove));
+            playerChosenMove = playerPokemon.getMove(selectedMove);
+
+            if (playerPokemon.getSpeed() >= enemyPokemon.getSpeed()) {
+                playerGoesFirst = true;
+            } else {
+                playerGoesFirst = false;
+            }
+
+            turnStep = 1; 
+            executeNextAttack();
         }
-        if (keyHandler.backPressed) { changeSubState(SubState.MAIN_MENU); }
+
+        if (keyHandler.backPressed) { 
+            keyHandler.backPressed = false;
+            if (!blockSwitching) {
+                changeSubState(SubState.MAIN_MENU); 
+            }
+        }
     }
 
+    private void executeNextAttack() {
+        if (turnStep == 1) {
+            if (playerGoesFirst) playerAttackAction();
+            else enemyAttackAction();
+        } else if (turnStep == 2) {
+            if (playerGoesFirst) enemyAttackAction();
+            else playerAttackAction();
+        }
+    }
+
+    private void playerAttackAction() {
+        subState = SubState.MESSAGE_ONLY;
+        int damage = playerPokemon.calculateDamage(playerChosenMove);
+        enemyPokemon.takeDamage(damage, playerChosenMove.getType());
+        
+        battleMessage = playerPokemon.getName() + " used " + playerChosenMove.getName() + "!";
+        messageTimer = MESSAGE_DURATION;
+        shakeTimer = 20; 
+        gamePanel.playSoundEffect("res/sound/hit.wav");
+    }
+
+    private void enemyAttackAction() {
+        List<Move> enemyMoves = enemyPokemon.getMoves();
+        if (enemyMoves.isEmpty()) return;
+
+        subState = SubState.MESSAGE_ONLY;
+        Move move = enemyMoves.get((int) (Math.random() * enemyMoves.size()));
+        int damage = enemyPokemon.calculateDamage(move);
+        playerPokemon.takeDamage(damage, move.getType());
+
+        battleMessage = "Wild " + enemyPokemon.getName() + " used " + move.getName() + "!";
+        messageTimer = MESSAGE_DURATION;
+        gamePanel.playSoundEffect("res/sound/hit.wav");
+    }
+    
     private void handleBagInput() {
         int itemCount = inventory.size();
         if (itemCount == 0) {
@@ -171,16 +354,41 @@ public class BattleState extends GameState {
             return;
         }
 
-        if (keyHandler.upPressed && selectedItem >= 2) { selectedItem -= 2; keyHandler.upPressed = false; }
-        if (keyHandler.downPressed && selectedItem <= 1 && (selectedItem + 2) < itemCount) { selectedItem += 2; keyHandler.downPressed = false; }
-        if (keyHandler.leftPressed && selectedItem % 2 != 0) { selectedItem -= 1; keyHandler.leftPressed = false; }
-        if (keyHandler.rightPressed && selectedItem % 2 == 0 && (selectedItem + 1) < itemCount) { selectedItem += 1; keyHandler.rightPressed = false; }
+        if (keyHandler.upPressed) {
+            keyHandler.upPressed = false;
+            if (selectedItem >= 2) {
+                selectedItem -= 2;
+            }
+        }
+        if (keyHandler.downPressed) {
+            keyHandler.downPressed = false;
+            if (selectedItem + 2 < itemCount) {
+                selectedItem += 2;
+            }
+        }
+        if (keyHandler.leftPressed) {
+            keyHandler.leftPressed = false;
+            if (selectedItem % 2 != 0) {
+                selectedItem -= 1; // Pindah dari kolom kanan ke kiri
+            } else if (selectedItem >= 2) {
+                selectedItem -= 1; // Opsional: kalau di kiri mencet kiri, naik ke baris atasnya
+            }
+        }
+        if (keyHandler.rightPressed) {
+            keyHandler.rightPressed = false;
+            if (selectedItem % 2 == 0 && selectedItem + 1 < itemCount) {
+                selectedItem += 1; // Pindah dari kolom kiri ke kanan
+            }
+        }
 
         if (keyHandler.actionPressed) {
             keyHandler.actionPressed = false;
             applyItemEffect(inventory.get(selectedItem));
         }
-        if (keyHandler.backPressed) { changeSubState(SubState.MAIN_MENU); }
+        if (keyHandler.backPressed) {
+            keyHandler.backPressed = false;
+            changeSubState(SubState.MAIN_MENU);
+        }
     }
     
     private void applyItemEffect(Item item) {
@@ -188,68 +396,147 @@ public class BattleState extends GameState {
 
         item.use(); 
         subState = SubState.MESSAGE_ONLY;
-        battleMessage = "Used " + item.getName().toUpperCase() + "!";
+        messageTimer = MESSAGE_DURATION;
         
+        // --- 1. LOGIKA ITEM PENYEMBUH (POTION) ---
         if (item.getName().toLowerCase().contains("potion")) {
+            battleMessage = "Used " + item.getName().toUpperCase() + "!";
             playerPokemon.setCurrentHp(playerPokemon.getCurrentHp() + item.getEffectValue());
             if (playerPokemon.getCurrentHp() > playerPokemon.getMaxHp()) 
                 playerPokemon.setCurrentHp(playerPokemon.getMaxHp());
+            
+            // --- MODIFIKASI FIX: Bebas milih Move setelah pakai item ---
+            turnStep = 0; // Kembalikan ke fase persiapan player
+            justSwitched = false; // Pastikan flag switch mati
+            // Gantian musuh tidak dipicu dulu, player kembali ke menu utama/move
         }
-
-        messageTimer = MESSAGE_DURATION;
-        phase = Phase.ENEMY_TURN; 
+        // --- 2. LOGIKA ITEM PENANGKAP (BALL) ---
+        else if (item.getName().toLowerCase().contains("ball")) {
+            battleMessage = "You threw a " + item.getName().toUpperCase() + "!";
+            
+            double catchChance = 1.0 - ((double) enemyPokemon.getCurrentHp() / enemyPokemon.getMaxHp());
+            if (item.getName().toLowerCase().contains("great")) {
+                catchChance *= 1.5; 
+            } else if (item.getName().toLowerCase().contains("ultra")) {
+                catchChance *= 2.0; 
+            }
+            if (catchChance < 0.2) catchChance = 0.2; 
+            
+            if (Math.random() < catchChance) {
+                boolean success = SaveManager.catchPokemon(enemyPokemon.getPokeId(), enemyPokemon.getLevel(), enemyPokemon.getCurrentHp());
+                if (success) battleMessage = "Gotcha! " + enemyPokemon.getName().toUpperCase() + " was caught!";
+                else battleMessage = "The Ball broke due to a database error!";
+                phase = Phase.BATTLE_END; 
+            } else {
+                // Kalo musuh lepas dari bola, player dikasih kesempatan milih move lagi buat nge-whittle HP-nya
+                battleMessage = "Oh no! The wild " + enemyPokemon.getName() + " broke free!";
+                
+                // --- MODIFIKASI FIX: Lepas ball bisa langsung move lagi ---
+                turnStep = 0;
+                justSwitched = false;
+            }
+        }
+        // --- 3. LOGIKA ITEM STATUS (X SPEED) ---
+        else if (item.getName().toLowerCase().contains("speed")) {
+            playerPokemon.setSpeed(playerPokemon.getSpeed() + item.getEffectValue());
+            battleMessage = playerPokemon.getName() + "'s SPEED rose sharply!";
+            
+            // --- MODIFIKASI FIX: Setelah nge-buff Speed, langsung gas pilih Move ---
+            turnStep = 0;
+            justSwitched = false;
+        }
     }
 
     private void handlePartyInput() {
-        if (keyHandler.backPressed) {
-            changeSubState(SubState.MAIN_MENU);
-        }
-    }
-    
-    private void executePlayerTurn(Move move) {
-        if (move == null) return;
-        subState = SubState.MESSAGE_ONLY;
-        int damage = playerPokemon.calculateDamage(move);
-        enemyPokemon.takeDamage(damage, move.getType());
-        battleMessage = playerPokemon.getName() + " used " + move.getName() + "!";
-        messageTimer = MESSAGE_DURATION;
-        shakeTimer = 20; 
+        int partySize = playerParty.size();
         
-        if (!enemyPokemon.isFainted()) phase = Phase.ENEMY_TURN;
-    }
+        if (keyHandler.upPressed) { 
+            if (selectedPartyIndex > 0) selectedPartyIndex--; 
+            keyHandler.upPressed = false; 
+        }
+        if (keyHandler.downPressed) { 
+            if (selectedPartyIndex < partySize - 1) selectedPartyIndex++; 
+            keyHandler.downPressed = false; 
+        }
 
-    private void handleEnemyTurn() {
-        List<Move> enemyMoves = enemyPokemon.getMoves();
-        if (enemyMoves.isEmpty()) { phase = Phase.PLAYER_TURN; return; }
-
-        Move move = enemyMoves.get((int) (Math.random() * enemyMoves.size()));
-        int damage = enemyPokemon.calculateDamage(move);
-        playerPokemon.takeDamage(damage, move.getType());
-
-        battleMessage = "Wild " + enemyPokemon.getName() + " used " + move.getName() + "!";
-        messageTimer = MESSAGE_DURATION;
-        subState = SubState.MESSAGE_ONLY;
-        phase = Phase.PLAYER_TURN;
-
-        if (playerPokemon.isFainted()) {
-            battleMessage = playerPokemon.getName() + " fainted! You blacked out...";
-            phase = Phase.BATTLE_END;
+        if (keyHandler.actionPressed) {
+            keyHandler.actionPressed = false;
+            Pokemon chosenPokemon = playerParty.get(selectedPartyIndex);
+            
+            if (chosenPokemon.isFainted()) {
+                battleMessage = chosenPokemon.getName() + " has no energy left!";
+                messageTimer = 60;
+                subState = SubState.MESSAGE_ONLY;
+            } 
+            else if (chosenPokemon.getPokeId() == playerPokemon.getPokeId()) {
+                battleMessage = chosenPokemon.getName() + " is already in battle!";
+                messageTimer = 60;
+                subState = SubState.MESSAGE_ONLY;
+            } 
+            else {
+                battleMessage = "Come back, " + playerPokemon.getName() + "! Go, " + chosenPokemon.getName() + "!";
+                messageTimer = 90;
+                
+                boolean wasFainted = playerPokemon.isFainted();
+                playerPokemon = chosenPokemon;
+                isFaintHandled = false; 
+                introCounter = 0; 
+                subState = SubState.MESSAGE_ONLY;
+                
+                if (wasFainted) {
+                    justSwitched = false;
+                    blockSwitching = false;
+                    turnStep = 0;
+                } else {
+                    justSwitched = true;
+                    blockSwitching = true; 
+                    turnStep = 0;
+                }
+            }
+        }
+        
+        if (keyHandler.backPressed) { 
+            keyHandler.backPressed = false;
+            if(!playerPokemon.isFainted()) {
+                changeSubState(SubState.MAIN_MENU); 
+            }
         }
     }
 
     private void handleVictory() {
-        int exp = enemyPokemon.getLevel() * 20;
-        playerPokemon.gainExp(exp);
-        battleMessage = enemyPokemon.getName() + " fainted! Gained " + exp + " EXP.";
-        messageTimer = MESSAGE_DURATION;
+        int expGained = enemyPokemon.getLevel() * 20;
+        int currentExp = playerPokemon.getExp() + expGained;
+        playerPokemon.gainExp(expGained); 
+        int expNeeded = playerPokemon.getLevel() * 100;
+        
+        battleMessage = enemyPokemon.getName() + " fainted! Gained " + expGained + " EXP.";
+        
+        if (currentExp >= expNeeded) {
+            int newLevel = playerPokemon.getLevel() + 1;
+            playerPokemon.setLevel(newLevel); 
+            playerPokemon.setExp(currentExp - expNeeded); 
+            
+            playerPokemon.setMaxHp(playerPokemon.getMaxHp() + 5);
+            playerPokemon.setAttack(playerPokemon.getAttack() + 2);
+            playerPokemon.setDefense(playerPokemon.getDefense() + 2);
+            playerPokemon.setSpeed(playerPokemon.getSpeed() + 2);
+            
+            playerPokemon.setCurrentHp(playerPokemon.getMaxHp()); 
+            
+            battleMessage = playerPokemon.getName() + " grew to Level " + newLevel + "!";
+        }
+        
+        messageTimer = MESSAGE_DURATION; 
         phase = Phase.BATTLE_END;
-        SaveManager.savePokemonStatus(playerPokemon);
+        
+        savePartyToDatabase(); // Panggil fungsi penyelamat
     }
 
     private void flee() {
         battleMessage = "Got away safely!";
         messageTimer = MESSAGE_DURATION;
         phase = Phase.BATTLE_END;
+        savePartyToDatabase(); // FIX: Save HP pas kabur biar gak ngecheat wkwkwk
     }
 
     private void changeSubState(SubState newState) {
@@ -262,22 +549,20 @@ public class BattleState extends GameState {
     
     @Override
     public void render(Graphics2D g2d) {
-        // 1. Background
-        g2d.setColor(new Color(100, 180, 100));
+        g2d.setColor(Color.WHITE);
         g2d.fillRect(0, 0, GamePanel.SCREEN_WIDTH, GamePanel.SCREEN_HEIGHT);
 
-        // 2. HUD Musuh
-        hud.renderPokemonHUD(g2d, enemyPokemon, GamePanel.SCREEN_WIDTH - 220, 20, false, pokemonFont);
+        if (introCounter >= MAX_INTRO_TIME) {
+            int enemyCardX = GamePanel.SCREEN_WIDTH - 440;
+            renderStatusCard(g2d, enemyCardX, 40, enemyPokemon, true);
+        }
         
-        // 3. Render Sprites
         renderSprites(g2d);
 
-        // 4. UI BOTTOM AREA
         int bottomY = GamePanel.SCREEN_HEIGHT - 130;
         int boxX = 20;
         int boxW = (messageTimer <= 0) ? 400 : GamePanel.SCREEN_WIDTH - 40;
 
-        // Kotak Pesan / Status
         g2d.setColor(new Color(30, 30, 30, 250));
         g2d.fillRoundRect(boxX, bottomY, boxW, 110, 15, 15);
         g2d.setColor(Color.WHITE);
@@ -288,11 +573,10 @@ public class BattleState extends GameState {
             g2d.setFont(pokemonFont.deriveFont(16f)); 
             g2d.drawString(battleMessage, boxX + 40, bottomY + 65);
         } else {
-            renderIntegratedStatus(g2d, boxX, bottomY);
+            renderStatusCard(g2d, boxX, bottomY, playerPokemon, false);
         }
 
-        // 5. MENU INTERAKSI DINAMIS
-        if (messageTimer <= 0) {
+        if (messageTimer <= 0 && introCounter >= MAX_INTRO_TIME) {
             if (subState == SubState.MAIN_MENU) {
                 hud.renderBattleMenu(g2d, menuOptions, selectedOption, pokemonFont);
             } 
@@ -303,68 +587,93 @@ public class BattleState extends GameState {
                 hud.renderBagMenu(g2d, inventory, selectedItem, pokemonFont);
             }
             else if (subState == SubState.POKEMON) {
-                hud.renderPartyMenu(g2d, java.util.Arrays.asList(playerPokemon), 0, pokemonFont);
+                hud.renderPartyMenu(g2d, playerParty, selectedPartyIndex, pokemonFont);
             }
-        }                                            
+        } 
+        
+        if (isExiting) {
+            float finalAlpha = (float) exitCounter / MAX_EXIT_TIME;
+            if (finalAlpha > 1f) finalAlpha = 1f; 
+
+            g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, finalAlpha));
+            g2d.setColor(Color.BLACK);
+            g2d.fillRect(0, 0, GamePanel.SCREEN_WIDTH, GamePanel.SCREEN_HEIGHT);
+            
+            g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1f));
+        }
     }
 
     private void renderSprites(Graphics2D g2d) {
-        // Kunci Pixel Art: Pakai NEAREST_NEIGHBOR biar pas digedein tetep tajam
         g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
 
-        // 2. Set ukuran berbeda untuk Player dan Musuh
         int playerSpriteSize = 600; 
-        int enemySpriteSize = (int) (playerSpriteSize * 0.675); // scaling dari ukurang player
+        int enemySpriteSize = (int) (playerSpriteSize * 0.675); 
 
-        // --- RENDER SPRITE PLAYER (Kiri Bawah) ---
-        java.awt.image.BufferedImage pImg = SpriteLoader.loadPokemon(playerPokemon.getPokeId()); 
+        int pTargetX = 60;
+        int pTargetY = GamePanel.SCREEN_HEIGHT - playerSpriteSize - 130; 
+        int eTargetX = GamePanel.SCREEN_WIDTH - enemySpriteSize - 200; 
+        int eTargetY = 120; 
 
-        if (pImg != null) {
-            int pX = 60;
-            // Posisikan di atas kotak dialog bawah
-            int pY = GamePanel.SCREEN_HEIGHT - playerSpriteSize - 130; 
-
-            // Animasi maju saat menyerang
-            if (subState == SubState.MESSAGE_ONLY && phase == Phase.PLAYER_TURN && !enemyPokemon.isFainted()) {
-                pX += 40; 
-            }
-
-            // Gambar menggunakan playerSpriteSize
-            g2d.drawImage(pImg, pX, pY, playerSpriteSize, playerSpriteSize, null);
+        if (subState == SubState.MESSAGE_ONLY && phase == Phase.PLAYER_TURN && !enemyPokemon.isFainted() && introCounter >= MAX_INTRO_TIME) {
+            pTargetX += 40; 
         }
 
-        // --- RENDER SPRITE MUSUH (Kanan Atas) ---
+        if (shakeTimer > 0 && phase == Phase.PLAYER_TURN && introCounter >= MAX_INTRO_TIME) {
+            eTargetX += (int)(Math.random() * 10) - 5;
+            eTargetY += (int)(Math.random() * 10) - 5;
+        }
+
+        int pCurrentX = pTargetX;
+        int eCurrentX = eTargetX;
+
+        if (introCounter < MAX_INTRO_TIME) {
+            double progress = (double) introCounter / MAX_INTRO_TIME;
+            double easeOut = 1 - Math.pow(1 - progress, 3); 
+
+            int pStartX = -playerSpriteSize; 
+            int eStartX = GamePanel.SCREEN_WIDTH + enemySpriteSize; 
+
+            pCurrentX = (int) (pStartX + (pTargetX - pStartX) * easeOut);
+            eCurrentX = (int) (eStartX + (eTargetX - eStartX) * easeOut);
+        }
+
+        g2d.setColor(new Color(0, 0, 0, 40)); 
+        g2d.fillOval(pCurrentX + 150, pTargetY + playerSpriteSize - 120, 300, 60); 
+        g2d.fillOval(eCurrentX + 100, eTargetY + enemySpriteSize - 50, 220, 45); 
+
+        java.awt.image.BufferedImage pImg = SpriteLoader.loadPokemon(playerPokemon.getPokeId()); 
+        if (pImg != null) {
+            g2d.drawImage(pImg, pCurrentX, pTargetY, playerSpriteSize, playerSpriteSize, null);
+        }
+
         java.awt.image.BufferedImage eImg = SpriteLoader.loadPokemon(enemyPokemon.getPokeId());
-
         if (eImg != null) {
-            // Posisikan di pojok kanan, dikurangi ukuran sprite musuh dan margin
-            int eX = GamePanel.SCREEN_WIDTH - enemySpriteSize - 200; 
-            
-            // Y nya kita tambah sedikit biar musuhnya nggak kelihatan terlalu "terbang" ke atas
-            int eY = 120; 
-
-            // Efek getar (shake) saat kena hit
-            if (shakeTimer > 0 && phase == Phase.PLAYER_TURN) {
-                eX += (int)(Math.random() * 10) - 5;
-                eY += (int)(Math.random() * 10) - 5;
-            }
-
-            // Gambar menggunakan enemySpriteSize
-            g2d.drawImage(eImg, eX, eY, enemySpriteSize, enemySpriteSize, null);
+            g2d.drawImage(eImg, eCurrentX, eTargetY, enemySpriteSize, enemySpriteSize, null);
         }
     }
     
-    private void renderIntegratedStatus(Graphics2D g2d, int x, int y) {
+    private void renderStatusCard(Graphics2D g2d, int x, int y, Pokemon pokemon, boolean isEnemy) {
         g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 
-        // NAMA & LEVEL
+        if (isEnemy) {
+            g2d.setColor(new Color(30, 30, 30, 250)); 
+            g2d.fillRoundRect(x, y, 400, 110, 15, 15);
+            g2d.setColor(Color.WHITE);
+            g2d.setStroke(new java.awt.BasicStroke(3));
+            g2d.drawRoundRect(x, y, 400, 110, 15, 15);
+        }
+
+        String pName = pokemon.getName().toUpperCase();
+        if (pName.length() > 10) {
+            pName = pName.substring(0, 9) + "..";
+        }
+
         g2d.setFont(pokemonFont.deriveFont(14f));
         g2d.setColor(Color.WHITE);
-        g2d.drawString(playerPokemon.getName().toUpperCase(), x + 40, y + 45);
+        g2d.drawString(pName, x + 40, y + 45);
         g2d.setFont(pokemonFont.deriveFont(12f));
-        g2d.drawString("Lv " + playerPokemon.getLevel(), x + 280, y + 45);
+        g2d.drawString("Lv " + pokemon.getLevel(), x + 280, y + 45);
 
-        // HP BAR
         g2d.setFont(pokemonFont.deriveFont(10f));
         g2d.setColor(new Color(255, 225, 0)); 
         g2d.drawString("HP", x + 40, y + 72);
@@ -372,17 +681,19 @@ public class BattleState extends GameState {
         g2d.setColor(new Color(50, 50, 50));
         g2d.fillRect(x + 80, y + 60, 250, 14);
 
-        double hpPercent = (double) playerPokemon.getCurrentHp() / playerPokemon.getMaxHp();
+        double hpPercent = (double) pokemon.getCurrentHp() / pokemon.getMaxHp();
+        if (hpPercent < 0) hpPercent = 0; 
         int barWidth = (int) (hpPercent * 250);
+        
         if (hpPercent > 0.5) g2d.setColor(new Color(65, 225, 65));
         else if (hpPercent > 0.2) g2d.setColor(Color.YELLOW);
         else g2d.setColor(new Color(255, 60, 60));
+        
         g2d.fillRect(x + 80, y + 60, barWidth, 14);
 
-        // ANGKA HP
         g2d.setFont(pokemonFont.deriveFont(14f));
         g2d.setColor(Color.WHITE);
-        String hpText = playerPokemon.getCurrentHp() + "/" + playerPokemon.getMaxHp();
+        String hpText = pokemon.getCurrentHp() + "/" + pokemon.getMaxHp();
         int textW = g2d.getFontMetrics().stringWidth(hpText);
         g2d.drawString(hpText, x + 330 - textW, y + 95);
     }

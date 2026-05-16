@@ -14,6 +14,7 @@ import java.awt.Font;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints; 
 import java.util.List;
+
 /**
  *
  * @author thety
@@ -46,6 +47,7 @@ public class HUD {
         g2d.fillRect(barX, barY, barW, barH);
 
         double hpRatio = (double) pokemon.getCurrentHp() / pokemon.getMaxHp();
+        if (hpRatio < 0) hpRatio = 0;
         int fillW = (int)(barW * hpRatio);
         
         if (hpRatio > 0.5) g2d.setColor(new Color(65, 225, 65));
@@ -56,11 +58,13 @@ public class HUD {
     }
 
     public void renderBattleMenu(Graphics2D g2d, String[] options, int selected, Font font) {
-        int x = 440, y = GamePanel.SCREEN_HEIGHT - 130, width = 340, height = 110;
-        drawWindow(g2d, x, y, width, height);
-
         if (font != null) g2d.setFont(font.deriveFont(18f));
         else g2d.setFont(new Font("Monospaced", Font.BOLD, 18));
+
+        int width = 340, height = 110;
+        int x = GamePanel.SCREEN_WIDTH - 20 - width; // Nempel ke margin kanan
+        int y = GamePanel.SCREEN_HEIGHT - 130;
+        drawWindow(g2d, x, y, width, height);
 
         for (int i = 0; i < options.length; i++) {
             int col = i % 2;
@@ -69,38 +73,102 @@ public class HUD {
             int optY = y + 45 + (row * 40);
 
             if (i == selected) {
-                // Gambar segitiga, bukan teks ">"
                 drawCursor(g2d, optX - 25, optY - 5); 
                 g2d.setColor(Color.YELLOW);
             } else {
                 g2d.setColor(Color.WHITE);
             }
-            // Gambar teks tanpa embel-embel ">"
             g2d.drawString(options[i], optX, optY);
         }
     }
 
     public void renderMoveMenu(Graphics2D g2d, List<Move> moves, int selectedMove, Font font) {
-        int x = 440, y = GamePanel.SCREEN_HEIGHT - 130, width = 340, height = 110;
-        drawWindow(g2d, x, y, width, height);
-
         if (font != null) g2d.setFont(font.deriveFont(16f));
         else g2d.setFont(new Font("Monospaced", Font.BOLD, 16));
 
-        for (int i = 0; i < moves.size(); i++) {
-            int col = i % 2;
-            int row = i / 2;
-            int moveX = x + 45 + (col * 150);
+        // 1. SISTEM HALAMAN: Tampilkan maksimal 4 jurus per layar
+        int startIdx = (selectedMove / 4) * 4;
+        int endIdx = Math.min(startIdx + 4, moves.size());
+
+        // 2. SISTEM RESPONSIF: Hitung teks paling panjang di halaman ini
+        int maxTextWidth = 0;
+        for (int i = startIdx; i < endIdx; i++) {
+            int w = g2d.getFontMetrics().stringWidth(moves.get(i).getName().toUpperCase());
+            if (w > maxTextWidth) maxTextWidth = w;
+        }
+
+        int colWidth = maxTextWidth + 40; // Spasi untuk kursor segitiga
+        int width = Math.max(340, (colWidth * 2) + 40); // Minimal 340px, tapi bisa melar
+        int x = GamePanel.SCREEN_WIDTH - 20 - width; 
+        int y = GamePanel.SCREEN_HEIGHT - 130;
+        int height = 110;
+
+        drawWindow(g2d, x, y, width, height);
+
+        for (int i = startIdx; i < endIdx; i++) {
+            int displayIdx = i - startIdx;
+            int col = displayIdx % 2;
+            int row = displayIdx / 2;
+            int moveX = x + 40 + (col * colWidth);
             int moveY = y + 45 + (row * 40);
 
             if (i == selectedMove) {
-                drawCursor(g2d, moveX - 25, moveY - 5);
+                drawCursor(g2d, moveX - 20, moveY - 5);
                 g2d.setColor(Color.YELLOW);
             } else {
                 g2d.setColor(Color.WHITE);
             }
-            g2d.drawString(moves.get(i).getName(), moveX, moveY);
+            g2d.drawString(moves.get(i).getName().toUpperCase(), moveX, moveY);
         }
+        
+        // Render indikator panah jika halaman bisa di-scroll
+        renderScrollIndicators(g2d, x, y, width, height, startIdx, endIdx, moves.size());
+    }
+
+    public void renderBagMenu(Graphics2D g2d, List<com.pokemongame.item.Item> items, int selected, Font font) {
+        if (font != null) g2d.setFont(font.deriveFont(14f)); 
+        else g2d.setFont(new Font("Monospaced", Font.BOLD, 14));
+
+        // 1. SISTEM HALAMAN: Tampilkan maksimal 4 item per layar
+        int startIdx = (selected / 4) * 4;
+        int endIdx = Math.min(startIdx + 4, items.size());
+
+        // 2. SISTEM RESPONSIF: Hitung teks paling panjang (contoh: HYPER POTION x10)
+        int maxTextWidth = 0;
+        for (int i = startIdx; i < endIdx; i++) {
+            String text = items.get(i).getName().toUpperCase() + " x" + items.get(i).getQuantity();
+            int w = g2d.getFontMetrics().stringWidth(text);
+            if (w > maxTextWidth) maxTextWidth = w;
+        }
+
+        int colWidth = maxTextWidth + 40; 
+        int width = Math.max(340, (colWidth * 2) + 40); 
+        int x = GamePanel.SCREEN_WIDTH - 20 - width; 
+        int y = GamePanel.SCREEN_HEIGHT - 130;
+        int height = 110;
+
+        drawWindow(g2d, x, y, width, height);
+
+        for (int i = startIdx; i < endIdx; i++) {
+            int displayIdx = i - startIdx; // Ubah index asli jadi 0, 1, 2, atau 3
+            int col = displayIdx % 2;
+            int row = displayIdx / 2;
+            int itemX = x + 40 + (col * colWidth);
+            int itemY = y + 45 + (row * 40);
+
+            if (i == selected) {
+                drawCursor(g2d, itemX - 20, itemY - 5);
+                g2d.setColor(Color.YELLOW);
+            } else {
+                g2d.setColor(Color.WHITE);
+            }
+
+            String text = items.get(i).getName().toUpperCase() + " x" + items.get(i).getQuantity();
+            g2d.drawString(text, itemX, itemY);
+        }
+        
+        // Render indikator panah jika tas penuh
+        renderScrollIndicators(g2d, x, y, width, height, startIdx, endIdx, items.size());
     }
 
     public void renderPartyMenu(Graphics2D g2d, List<Pokemon> party, int selected, Font font) {
@@ -135,29 +203,20 @@ public class HUD {
         g2d.drawString("[X] BACK", boxX + 30, boxY + boxH - 20);
     }
     
-    // Ganti method renderBagMenu di HUD.java dengan ini:
-    public void renderBagMenu(Graphics2D g2d, List<com.pokemongame.item.Item> items, int selected, Font font) {
-        int x = 440, y = GamePanel.SCREEN_HEIGHT - 130, width = 340, height = 110;
-        drawWindow(g2d, x, y, width, height);
-
-        if (font != null) g2d.setFont(font.deriveFont(14f)); // Ukuran 14 agar muat teks panjang
-
-        for (int i = 0; i < items.size(); i++) {
-            int col = i % 2;
-            int row = i / 2;
-            int itemX = x + 45 + (col * 150);
-            int itemY = y + 45 + (row * 40);
-
-            if (i == selected) {
-                drawCursor(g2d, itemX - 25, itemY - 5);
-                g2d.setColor(Color.YELLOW);
-            } else {
-                g2d.setColor(Color.WHITE);
-            }
-
-            // Tampilkan Nama + Jumlah (Contoh: POTION x5)
-            String text = items.get(i).getName().toUpperCase() + " x" + items.get(i).getQuantity();
-            g2d.drawString(text, itemX, itemY);
+    // --- METHOD BANTUAN UNTUK GAMBAR PANAH SCROLL ---
+    private void renderScrollIndicators(Graphics2D g2d, int x, int y, int width, int height, int startIdx, int endIdx, int totalSize) {
+        g2d.setColor(Color.YELLOW);
+        // Kalau masih ada item di halaman bawah
+        if (totalSize > endIdx) {
+            int[] xPoints = {x + width - 25, x + width - 15, x + width - 20};
+            int[] yPoints = {y + height - 20, y + height - 20, y + height - 10}; 
+            g2d.fillPolygon(xPoints, yPoints, 3);
+        }
+        // Kalau masih ada item di halaman atas
+        if (startIdx > 0) {
+            int[] xPoints = {x + width - 25, x + width - 15, x + width - 20};
+            int[] yPoints = {y + 20, y + 20, y + 10}; 
+            g2d.fillPolygon(xPoints, yPoints, 3);
         }
     }
     

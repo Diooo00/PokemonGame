@@ -182,4 +182,40 @@ public class Pokemon {
     public int getExp() {
         return exp; 
     }
+    public void setLevel(int level) {
+        this.level = level;
+    }
+
+    public void setExp(int exp) {
+        this.exp = exp;
+    }
+
+    public void setMaxHp(int maxHp) {
+        this.maxHp = maxHp;
+    }
+
+    // Catatan: Sesuaikan nama variabel internal kamu (apakah 'attack' atau 'atk')
+    public int getAttack() {
+        return this.attack; // Ganti ke 'this.atk' jika nama variabelmu 'atk'
+    }
+
+    public void setAttack(int attack) {
+        this.attack = attack;
+    }
+
+    public int getDefense() {
+        return this.defense; // Ganti ke 'this.def' jika nama variabelmu 'def'
+    }
+
+    public void setDefense(int defense) {
+        this.defense = defense;
+    }
+
+    public int getSpeed() {
+        return this.speed; // Ganti ke 'this.spd' jika nama variabelmu 'spd'
+    }
+
+    public void setSpeed(int speed) {
+        this.speed = speed;
+    }
 }

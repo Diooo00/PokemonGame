@@ -17,6 +17,8 @@ public class NPC extends Entity {
 
     private String[] dialogLines;
     private int dialogIndex = 0;
+    private int dialogueIndex = 0;
+    private String[] dialogues;
 
     public NPC(GamePanel gamePanel, int worldX, int worldY, String[] dialogLines) {
         super(gamePanel);
@@ -36,6 +38,23 @@ public class NPC extends Entity {
             return dialogLines[dialogIndex];
         }
         return null;
+    }
+    
+    public void speak() {
+        if (dialogues != null && dialogues.length > 0) {
+            // Menampilkan dialog ke console untuk memastikan kodenya bekerja
+            System.out.println("NPC: " + dialogues[dialogueIndex]);
+
+            // Logika sederhana: ganti ke baris dialog berikutnya saat ditekan lagi
+            dialogueIndex++;
+            if (dialogueIndex >= dialogues.length) {
+                dialogueIndex = 0; // Reset ke dialog pertama jika sudah habis
+            }
+
+            // JIKA kamu punya UI Dialogue Box di GamePanel, kamu bisa memicunya di sini:
+            // gamePanel.ui.currentDialogue = dialogues[dialogueIndex];
+            // gamePanel.gameState = gamePanel.DIALOGUE_STATE;
+        }
     }
 
     public void nextDialog() {

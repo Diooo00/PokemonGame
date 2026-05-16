@@ -4,6 +4,7 @@
  */
 package com.pokemongame.main;
 
+import com.pokemongame.audio.AudioThread;
 import com.pokemongame.input.KeyHandler;
 import com.pokemongame.state.GameState;
 import com.pokemongame.world.TileMap;
@@ -39,6 +40,7 @@ public class GamePanel extends JPanel {
     private KeyHandler keyHandler;
     private TileMap tileMap;
     private Camera camera;
+    private AudioThread currentBGM;
     public CollisionChecker cChecker = new CollisionChecker(this);
     
     // State aktif saat ini
@@ -130,5 +132,27 @@ public class GamePanel extends JPanel {
             return (OverworldState) currentState;
         }
         return null;
+    }
+    
+    public void playMusic(String path) {
+        // Matikan lagu sebelumnya kalau ada
+        if (currentBGM != null) {
+            currentBGM.stopAudio();
+        }
+        // Buat Thread baru dan jalankan!
+        currentBGM = new AudioThread(path, true); // true = looping
+        currentBGM.start();
+    }
+    
+    public void stopMusic() {
+        if (currentBGM != null) {
+            currentBGM.stopAudio();
+            currentBGM = null;
+        }
+    }
+    
+    public void playSoundEffect(String path) {
+        AudioThread se = new AudioThread(path, false); // false = sekali main
+        se.start();
     }
 }
