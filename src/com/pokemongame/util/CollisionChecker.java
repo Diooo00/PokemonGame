@@ -6,6 +6,7 @@ package com.pokemongame.util;
 
 import com.pokemongame.entity.Entity;
 import com.pokemongame.main.GamePanel;
+
 /**
  *
  * @author user
@@ -29,38 +30,33 @@ public class CollisionChecker {
         int entityTopRow = entityTopWorldY / GamePanel.TILE_SIZE;
         int entityBottomRow = entityBottomWorldY / GamePanel.TILE_SIZE;
 
-        int tileNum1, tileNum2;
-
+        // Kita ganti logika pengecekannya pakai fungsi isSolid() dari TileMap baru
         switch (entity.direction) {
             case "UP":
                 entityTopRow = (entityTopWorldY - entity.speed) / GamePanel.TILE_SIZE;
-                tileNum1 = gp.getTileMap().getTileNum(entityLeftCol, entityTopRow);
-                tileNum2 = gp.getTileMap().getTileNum(entityRightCol, entityTopRow);
-                if (gp.getTileMap().isTileSolid(tileNum1) || gp.getTileMap().isTileSolid(tileNum2)) {
+                if (gp.getTileMap().isSolid(entityTopRow, entityLeftCol) || 
+                    gp.getTileMap().isSolid(entityTopRow, entityRightCol)) {
                     entity.collisionOn = true;
                 }
                 break;
             case "DOWN":
                 entityBottomRow = (entityBottomWorldY + entity.speed) / GamePanel.TILE_SIZE;
-                tileNum1 = gp.getTileMap().getTileNum(entityLeftCol, entityBottomRow);
-                tileNum2 = gp.getTileMap().getTileNum(entityRightCol, entityBottomRow);
-                if (gp.getTileMap().isTileSolid(tileNum1) || gp.getTileMap().isTileSolid(tileNum2)) {
+                if (gp.getTileMap().isSolid(entityBottomRow, entityLeftCol) || 
+                    gp.getTileMap().isSolid(entityBottomRow, entityRightCol)) {
                     entity.collisionOn = true;
                 }
                 break;
             case "LEFT":
                 entityLeftCol = (entityLeftWorldX - entity.speed) / GamePanel.TILE_SIZE;
-                tileNum1 = gp.getTileMap().getTileNum(entityLeftCol, entityTopRow);
-                tileNum2 = gp.getTileMap().getTileNum(entityLeftCol, entityBottomRow);
-                if (gp.getTileMap().isTileSolid(tileNum1) || gp.getTileMap().isTileSolid(tileNum2)) {
+                if (gp.getTileMap().isSolid(entityTopRow, entityLeftCol) || 
+                    gp.getTileMap().isSolid(entityBottomRow, entityLeftCol)) {
                     entity.collisionOn = true;
                 }
                 break;
             case "RIGHT":
                 entityRightCol = (entityRightWorldX + entity.speed) / GamePanel.TILE_SIZE;
-                tileNum1 = gp.getTileMap().getTileNum(entityRightCol, entityTopRow);
-                tileNum2 = gp.getTileMap().getTileNum(entityRightCol, entityBottomRow);
-                if (gp.getTileMap().isTileSolid(tileNum1) || gp.getTileMap().isTileSolid(tileNum2)) {
+                if (gp.getTileMap().isSolid(entityTopRow, entityRightCol) || 
+                    gp.getTileMap().isSolid(entityBottomRow, entityRightCol)) {
                     entity.collisionOn = true;
                 }
                 break;
