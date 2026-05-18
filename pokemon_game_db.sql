@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: May 15, 2026 at 08:34 PM
+-- Generation Time: May 18, 2026 at 06:39 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -30,7 +30,7 @@ SET time_zone = "+00:00";
 CREATE TABLE `items` (
   `item_id` int(11) NOT NULL,
   `name` varchar(50) DEFAULT NULL,
-  `type` enum('HEAL','RECOVER_PP','BALL') DEFAULT NULL,
+  `type` enum('HEAL','RECOVER_PP','BALL','STAT') DEFAULT NULL,
   `effect_value` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -39,7 +39,13 @@ CREATE TABLE `items` (
 --
 
 INSERT INTO `items` (`item_id`, `name`, `type`, `effect_value`) VALUES
-(1, 'Potion', 'HEAL', 20);
+(1, 'Potion', 'HEAL', 20),
+(2, 'Super Potion', 'HEAL', 50),
+(3, 'Hyper Potion', 'HEAL', 120),
+(4, 'Poke Ball', 'BALL', 1),
+(5, 'Great Ball', 'BALL', 2),
+(6, 'Ultra Ball', 'BALL', 3),
+(7, 'X Speed', 'STAT', 15);
 
 -- --------------------------------------------------------
 
@@ -64,7 +70,17 @@ INSERT INTO `moves_base` (`move_id`, `name`, `power`, `accuracy`, `type`, `categ
 (1, 'Tackle', 40, 100, 'NORMAL', 'PHYSICAL'),
 (2, 'Ember', 40, 100, 'FIRE', 'SPECIAL'),
 (3, 'Water Gun', 40, 100, 'WATER', 'SPECIAL'),
-(4, 'Vine Whip', 45, 100, 'GRASS', 'SPECIAL');
+(4, 'Vine Whip', 45, 100, 'GRASS', 'SPECIAL'),
+(7, 'Flamethrower', 90, 100, 'FIRE', 'SPECIAL'),
+(8, 'Thunderbolt', 90, 100, 'ELECTRIC', 'SPECIAL'),
+(9, 'Surf', 90, 100, 'WATER', 'SPECIAL'),
+(10, 'Earthquake', 100, 100, 'GROUND', 'PHYSICAL'),
+(11, 'Ice Beam', 90, 100, 'ICE', 'SPECIAL'),
+(12, 'Psychic', 90, 100, 'PSYCHIC', 'SPECIAL'),
+(13, 'Solar Beam', 120, 100, 'GRASS', 'SPECIAL'),
+(14, 'Dragon Claw', 80, 100, 'DRAGON', 'PHYSICAL'),
+(15, 'Shadow Ball', 80, 100, 'GHOST', 'SPECIAL'),
+(16, 'Hyper Beam', 150, 90, 'NORMAL', 'SPECIAL');
 
 -- --------------------------------------------------------
 
@@ -83,7 +99,13 @@ CREATE TABLE `player_inventory` (
 --
 
 INSERT INTO `player_inventory` (`player_id`, `item_id`, `quantity`) VALUES
-(1, 1, 5);
+(1, 1, 10),
+(1, 2, 5),
+(1, 3, 2),
+(1, 4, 20),
+(1, 5, 8),
+(1, 6, 3),
+(1, 7, 5);
 
 -- --------------------------------------------------------
 
@@ -105,9 +127,13 @@ CREATE TABLE `player_pokemon` (
 --
 
 INSERT INTO `player_pokemon` (`instance_id`, `player_id`, `poke_id`, `level`, `current_hp`, `exp`) VALUES
-(1, 1, 498, 5, 20, 0),
-(2, 1, 495, 5, 20, 0),
-(3, 1, 501, 5, 20, 0);
+(1, 1, 498, 5, 0, 0),
+(2, 1, 495, 6, 67, 0),
+(3, 1, 501, 5, 75, 0),
+(4, 1, 620, 5, 85, 0),
+(5, 1, 612, 6, 101, 0),
+(6, 1, 543, 3, 46, 0),
+(7, 1, 617, 5, 100, 0);
 
 -- --------------------------------------------------------
 
@@ -323,6 +349,131 @@ CREATE TABLE `pokemon_moves` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
+-- Dumping data for table `pokemon_moves`
+--
+
+INSERT INTO `pokemon_moves` (`poke_id`, `move_id`, `level_learned`) VALUES
+(494, 12, NULL),
+(495, 13, NULL),
+(496, 13, NULL),
+(497, 13, NULL),
+(498, 7, NULL),
+(499, 7, NULL),
+(500, 7, NULL),
+(501, 9, NULL),
+(502, 9, NULL),
+(503, 9, NULL),
+(504, 16, NULL),
+(505, 16, NULL),
+(506, 16, NULL),
+(507, 16, NULL),
+(508, 16, NULL),
+(511, 13, NULL),
+(512, 13, NULL),
+(513, 7, NULL),
+(514, 7, NULL),
+(515, 9, NULL),
+(516, 9, NULL),
+(517, 12, NULL),
+(518, 12, NULL),
+(519, 16, NULL),
+(520, 16, NULL),
+(521, 16, NULL),
+(522, 8, NULL),
+(523, 8, NULL),
+(527, 12, NULL),
+(528, 12, NULL),
+(529, 10, NULL),
+(530, 10, NULL),
+(531, 16, NULL),
+(535, 9, NULL),
+(536, 9, NULL),
+(537, 9, NULL),
+(546, 13, NULL),
+(547, 13, NULL),
+(548, 13, NULL),
+(549, 13, NULL),
+(550, 9, NULL),
+(551, 10, NULL),
+(552, 10, NULL),
+(553, 10, NULL),
+(554, 7, NULL),
+(555, 7, NULL),
+(556, 13, NULL),
+(561, 12, NULL),
+(562, 15, NULL),
+(563, 15, NULL),
+(564, 9, NULL),
+(565, 9, NULL),
+(572, 16, NULL),
+(573, 16, NULL),
+(574, 12, NULL),
+(575, 12, NULL),
+(576, 12, NULL),
+(577, 12, NULL),
+(578, 12, NULL),
+(579, 12, NULL),
+(580, 9, NULL),
+(581, 9, NULL),
+(582, 11, NULL),
+(583, 11, NULL),
+(584, 11, NULL),
+(585, 16, NULL),
+(586, 16, NULL),
+(587, 8, NULL),
+(590, 13, NULL),
+(591, 13, NULL),
+(592, 9, NULL),
+(593, 9, NULL),
+(594, 9, NULL),
+(597, 13, NULL),
+(598, 13, NULL),
+(602, 8, NULL),
+(603, 8, NULL),
+(604, 8, NULL),
+(605, 12, NULL),
+(606, 12, NULL),
+(607, 15, NULL),
+(608, 15, NULL),
+(609, 15, NULL),
+(610, 14, NULL),
+(611, 14, NULL),
+(612, 14, NULL),
+(613, 11, NULL),
+(614, 11, NULL),
+(615, 11, NULL),
+(618, 10, NULL),
+(621, 14, NULL),
+(622, 10, NULL),
+(623, 10, NULL),
+(626, 16, NULL),
+(627, 16, NULL),
+(628, 16, NULL),
+(631, 7, NULL),
+(640, 13, NULL),
+(642, 8, NULL),
+(643, 14, NULL),
+(644, 14, NULL),
+(645, 10, NULL),
+(646, 14, NULL),
+(647, 9, NULL),
+(648, 16, NULL),
+(494, 7, NULL),
+(536, 10, NULL),
+(537, 10, NULL),
+(540, 13, NULL),
+(541, 13, NULL),
+(542, 13, NULL),
+(585, 13, NULL),
+(586, 13, NULL),
+(607, 7, NULL),
+(608, 7, NULL),
+(609, 7, NULL),
+(636, 7, NULL),
+(637, 7, NULL),
+(643, 7, NULL);
+
+--
 -- Indexes for dumped tables
 --
 
@@ -379,19 +530,19 @@ ALTER TABLE `pokemon_moves`
 -- AUTO_INCREMENT for table `items`
 --
 ALTER TABLE `items`
-  MODIFY `item_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `item_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `moves_base`
 --
 ALTER TABLE `moves_base`
-  MODIFY `move_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `move_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
 
 --
 -- AUTO_INCREMENT for table `player_pokemon`
 --
 ALTER TABLE `player_pokemon`
-  MODIFY `instance_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `instance_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT for table `player_save`
