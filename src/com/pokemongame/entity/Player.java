@@ -37,8 +37,8 @@ public class Player extends Entity {
         this.gamePanel = gp;
         this.keyHandler = keyHandler;
 //        this.cChecker = new CollisionChecker(gp);
-        this.worldX = GamePanel.TILE_SIZE * 50; 
-        this.worldY = GamePanel.TILE_SIZE * 50;
+        this.worldX = GamePanel.TILE_SIZE * 61; 
+        this.worldY = GamePanel.TILE_SIZE * 62;
         this.speed = 7;
         
         setupPlayerSprites();

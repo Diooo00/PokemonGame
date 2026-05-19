@@ -144,23 +144,21 @@ public class OverworldState extends GameState {
 
     @Override
     public void render(Graphics2D g2d) {
-        // 1. Render Map Background (Tanah, rumput dasar, air, batang pohon)
+        // 1. Render Layer Tanah & Batang
         tileMap.renderBackground(g2d, camera.x, camera.y);
         
-        // --- TAMBAHAN FIX: Render NPC biar gak gaib ---
+        // 2. Render NPC
         for (NPC npc : npcs) {
-            if (npc != null) {
-                npc.render(g2d); 
-            }
+            if (npc != null) npc.render(g2d); 
         }
         
-        // 2. Render Player (Karakter berjalan di atas background)
+        // 3. Render Player
         if (player != null) player.render(g2d);
         
-        // 3. Render Map Foreground (Daun rimbun otomatis menimpa kepala player)
+        // 4. Render Foreground (Daun & Atap melayang menimpa Player/NPC)
         tileMap.renderForeground(g2d, camera.x, camera.y);
 
-        // 4. Efek Transisi Masuk Battle 
+        // --- EFEK KILAT BATTLE ---
         if (isTransitioning) {
             if (transitionCounter < 150) {
                 double speed = (transitionCounter < 60) ? 0.1 : 0.3; 
@@ -173,8 +171,7 @@ public class OverworldState extends GameState {
                 g2d.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1f));
 
                 applyScreenShake(g2d, (transitionCounter < 60) ? 2 : 5);
-            } 
-            else {
+            } else {
                 float finalAlpha = (float)(transitionCounter - 150) / 30f;
                 if (finalAlpha > 1f) finalAlpha = 1f;
 
@@ -188,13 +185,13 @@ public class OverworldState extends GameState {
             int boxX = 20;
             int boxW = GamePanel.SCREEN_WIDTH - 40;
 
-            g2d.setColor(new Color(25, 25, 25, 240)); 
+            g2d.setColor(new Color(25, 25, 25, 240));
             g2d.fillRoundRect(boxX, bottomY, boxW, 110, 15, 15);
             g2d.setColor(Color.WHITE);
             g2d.setStroke(new java.awt.BasicStroke(3));
             g2d.drawRoundRect(boxX, bottomY, boxW, 110, 15, 15);
 
-            g2d.setFont(new Font("Monospaced", Font.BOLD, 18)); 
+            g2d.setFont(new Font("Monospaced", Font.BOLD, 18));
             g2d.drawString("A wild Pokémon appeared...!", boxX + 40, bottomY + 65);
         }
     }

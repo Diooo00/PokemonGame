@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: May 18, 2026 at 06:19 PM
+-- Generation Time: May 19, 2026 at 09:06 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -139,9 +139,11 @@ INSERT INTO `player_pokemon` (`instance_id`, `player_id`, `poke_id`, `level`, `c
 (2, 1, 495, 6, 67, 0),
 (3, 1, 501, 5, 75, 0),
 (4, 1, 620, 5, 85, 0),
-(5, 1, 612, 7, 103, 0),
+(5, 1, 612, 7, 100, 0),
 (6, 1, 543, 3, 46, 0),
-(7, 1, 617, 5, 100, 0);
+(7, 1, 617, 5, 100, 0),
+(8, 1, 640, 3, 107, 0),
+(9, 1, 639, 4, 109, 40);
 
 -- --------------------------------------------------------
 
@@ -661,7 +663,7 @@ ALTER TABLE `moves_base`
 -- AUTO_INCREMENT for table `player_pokemon`
 --
 ALTER TABLE `player_pokemon`
-  MODIFY `instance_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+  MODIFY `instance_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT for table `player_save`
