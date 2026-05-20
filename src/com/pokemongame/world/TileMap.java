@@ -87,16 +87,16 @@ public class TileMap {
         setupTile(20, "rightvfence", true, false);
         
         // POHON & DAUN (Pucuknya di-set Foreground TRUE!)
-        setupTile(23, "singletree1", false, true); 
-        setupTile(24, "singletree2", false, true); 
+        setupTile(23, "singletree1", true, true); 
+        setupTile(24, "singletree2", true, true); 
         setupTile(25, "singletree3", true, false); // Batang
         setupTile(26, "singletree4", true, false); // Batang
         setupTile(27, "singletree5", true, false); // Batang
         setupTile(28, "singletree6", true, false); // Batang
-        setupTile(29, "slayeredtree1", false, true); // Daun
-        setupTile(30, "slayeredtree2", false, true); // Daun
-        setupTile(31, "slayeredtree3", false, true); // Daun
-        setupTile(32, "slayeredtree4", false, true); // Daun
+        setupTile(29, "slayeredtree1", true, true); // Daun
+        setupTile(30, "slayeredtree2", true, true); // Daun
+        setupTile(31, "slayeredtree3", true, true); // Daun
+        setupTile(32, "slayeredtree4", true, true); // Daun
         setupTile(33, "slayeredtree5", true, false); // Batang
         setupTile(34, "slayeredtree6", true, false); // Batang
         
