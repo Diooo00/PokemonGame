@@ -4,6 +4,7 @@
  */
 package com.pokemongame.ui;
 
+import com.pokemongame.item.Item;
 import com.pokemongame.main.GamePanel;
 import com.pokemongame.pokemon.Move;
 import com.pokemongame.pokemon.Pokemon;
@@ -125,50 +126,74 @@ public class HUD {
         renderScrollIndicators(g2d, x, y, width, height, startIdx, endIdx, moves.size());
     }
 
-    public void renderBagMenu(Graphics2D g2d, List<com.pokemongame.item.Item> items, int selected, Font font) {
-        if (font != null) g2d.setFont(font.deriveFont(14f)); 
-        else g2d.setFont(new Font("Monospaced", Font.BOLD, 14));
+     public void renderBagMenu(Graphics2D g2d, List<Item> inventory, int selectedItem, Font font) {
+        // 1. TENTUKAN UKURAN KOTAK (Tinggi & Rapi)
+        int width = 340;
+        int height = 360; 
+        
+        // 2. POSISIKAN DI KANAN BAWAH
+        int x = GamePanel.SCREEN_WIDTH - width - 20; 
+        int y = GamePanel.SCREEN_HEIGHT - height - 20;
 
-        // 1. SISTEM HALAMAN: Tampilkan maksimal 4 item per layar
-        int startIdx = (selected / 4) * 4;
-        int endIdx = Math.min(startIdx + 4, items.size());
+        // 3. GAMBAR KOTAK BACKGROUND TAS
+        g2d.setColor(new Color(30, 30, 30, 240)); // Abu gelap transparan
+        g2d.fillRoundRect(x, y, width, height, 15, 15);
+        g2d.setColor(Color.WHITE);
+        g2d.setStroke(new java.awt.BasicStroke(3));
+        g2d.drawRoundRect(x, y, width, height, 15, 15);
 
-        // 2. SISTEM RESPONSIF: Hitung teks paling panjang (contoh: HYPER POTION x10)
-        int maxTextWidth = 0;
-        for (int i = startIdx; i < endIdx; i++) {
-            String text = items.get(i).getName().toUpperCase() + " x" + items.get(i).getQuantity();
-            int w = g2d.getFontMetrics().stringWidth(text);
-            if (w > maxTextWidth) maxTextWidth = w;
+        // Judul Menu Tas
+        g2d.setFont(font.deriveFont(18f));
+        g2d.drawString("BAG", x + 130, y + 40);
+        g2d.drawLine(x + 20, y + 50, x + width - 20, y + 50); // Garis bawah judul
+
+        g2d.setFont(font.deriveFont(14f));
+
+        // 4. LOGIKA SCROLLING (Nampilin 6 item)
+        int maxVisible = 6;
+        int startIndex = 0;
+        if (selectedItem >= maxVisible) {
+            startIndex = selectedItem - maxVisible + 1;
         }
 
-        int colWidth = maxTextWidth + 40; 
-        int width = Math.max(340, (colWidth * 2) + 40); 
-        int x = GamePanel.SCREEN_WIDTH - 20 - width; 
-        int y = GamePanel.SCREEN_HEIGHT - 130;
-        int height = 110;
+        // 5. GAMBAR ITEM-ITEMNYA
+        int drawCount = 0;
+        int itemY = y + 90; // Jarak item pertama dari atas
 
-        drawWindow(g2d, x, y, width, height);
+        for (int i = startIndex; i < inventory.size(); i++) {
+            if (drawCount >= maxVisible) break;
 
-        for (int i = startIdx; i < endIdx; i++) {
-            int displayIdx = i - startIdx; // Ubah index asli jadi 0, 1, 2, atau 3
-            int col = displayIdx % 2;
-            int row = displayIdx / 2;
-            int itemX = x + 40 + (col * colWidth);
-            int itemY = y + 45 + (row * 40);
+            Item item = inventory.get(i);
 
-            if (i == selected) {
-                drawCursor(g2d, itemX - 20, itemY - 5);
-                g2d.setColor(Color.YELLOW);
+            // --- PERBAIKAN POINTER: SEGITIGA SOLID ALA PANEL UTAMA ---
+            if (i == selectedItem) {
+                g2d.setColor(Color.YELLOW); // Warna Kuning pas dipilih
+
+                // A. Hitung Koordinat Segitiga Lancip Kanan
+                // Kita buat tinggi segitiga ~10px agar pas sama tinggi teks 14pt
+                int pointerX = x + 20; // Posisi kiri segitiga
+                
+                // Koordinat X: {Kiri, Kiri, Kanan/Lancip}
+                int[] xPoints = {pointerX, pointerX, pointerX + 10};
+                // Koordinat Y: {Atas, Bawah, Tengah}. Disesuaikan agar presisi vertikal sama teks.
+                int[] yPoints = {itemY - 11, itemY - 1, itemY - 6}; 
+
+                g2d.fillPolygon(xPoints, yPoints, 3); // Gambar Segitiga Solid
+
+                // B. Gambar Teks Item (Dikasih jarak/indent 35px biar ga ditabrak segitiga)
+                g2d.drawString(item.getName().toUpperCase(), x + 35, itemY);
             } else {
                 g2d.setColor(Color.WHITE);
+                // Gambar Teks Item Normal (Tetep indent 35px biar lurus)
+                g2d.drawString(item.getName().toUpperCase(), x + 35, itemY);
             }
 
-            String text = items.get(i).getName().toUpperCase() + " x" + items.get(i).getQuantity();
-            g2d.drawString(text, itemX, itemY);
+            // Gambar jumlah item (x5, x10)
+            g2d.drawString("x" + item.getQuantity(), x + width - 60, itemY);
+
+            itemY += 40; // Jarak vertikal ke item berikutnya
+            drawCount++;
         }
-        
-        // Render indikator panah jika tas penuh
-        renderScrollIndicators(g2d, x, y, width, height, startIdx, endIdx, items.size());
     }
 
     public void renderPartyMenu(Graphics2D g2d, List<Pokemon> party, int selected, Font font) {
@@ -233,5 +258,31 @@ public class HUD {
         int[] xPoints = {x, x + 10, x};      // Titik-titik X segitiga
         int[] yPoints = {y - 12, y - 6, y}; // Titik-titik Y segitiga (disesuaikan dengan tinggi font)
         g2d.fillPolygon(xPoints, yPoints, 3);
+    }
+    
+    public void renderDialogBox(Graphics2D g2d, String message1, String message2, Font font) {
+        // Bikin kotak dialog gede di bawah layar (nutupin menu)
+        int x = 20;
+        int y = GamePanel.SCREEN_HEIGHT - 130;
+        int width = GamePanel.SCREEN_WIDTH - 40;
+        int height = 110;
+        
+        drawWindow(g2d, x, y, width, height); // Panggil fungsi drawWindow milikmu
+
+        // Set font buat teks
+        if (font != null) g2d.setFont(font.deriveFont(18f));
+        else g2d.setFont(new Font("Monospaced", Font.BOLD, 18));
+        
+        g2d.setColor(Color.WHITE);
+
+        // Nggambar Baris 1: Nama Jurus (Pasti ada)
+        if (message1 != null && !message1.isEmpty()) {
+            g2d.drawString(message1, x + 30, y + 45);
+        }
+        
+        // Nggambar Baris 2: Super Effective / Not Very Effective (Kalau ada isinya)
+        if (message2 != null && !message2.isEmpty()) {
+            g2d.drawString(message2, x + 30, y + 80); // y + 80 biar turun ke baris bawah
+        }
     }
 }

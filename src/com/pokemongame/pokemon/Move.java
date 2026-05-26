@@ -15,6 +15,9 @@ public class Move {
     protected int power;
     protected int accuracy; // 0-100
     protected String type;  // Diubah dari Enum ke String
+    
+    protected int pp;
+    protected int maxPp;
 
     public enum Category { PHYSICAL, SPECIAL }
     protected Category category;
@@ -57,7 +60,13 @@ public class Move {
     public int getAccuracy()    { return accuracy; }
     public String getType()     { return type; } // Mengembalikan String (FIRE, WATER, dll)
     public Category getCategory() { return category; }
+    
+    public int getPp() { return pp; }
+    public void setPp(int pp) { this.pp = pp; }
 
+    public int getMaxPp() { return maxPp; }
+    public void setMaxPp(int maxPp) { this.maxPp = maxPp; }
+    
     @Override
     public String toString() { return name; }
 }

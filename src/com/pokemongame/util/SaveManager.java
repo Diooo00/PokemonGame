@@ -32,20 +32,27 @@ public class SaveManager {
                     String name = rs.getString("name");
                     String t1 = rs.getString("type1");
                     String t2 = rs.getString("type2");
+                    
                     int bHp = rs.getInt("base_hp");
                     int bAtk = rs.getInt("base_atk");
                     int bDef = rs.getInt("base_def");
+                    int bSpAtk = rs.getInt("base_sp_atk"); // <--- TARIK DARI DB
+                    int bSpDef = rs.getInt("base_sp_def"); // <--- TARIK DARI DB
                     int bSpd = rs.getInt("base_spd");
 
+                    // Hitung stat asli berdasarkan level
                     int finalHp = bHp + (level * 2) + 10;
                     int finalAtk = bAtk + (int)(level * 1.2);
                     int finalDef = bDef + (int)(level * 1.2);
+                    int finalSpAtk = bSpAtk + (int)(level * 1.2); // <--- HITUNG
+                    int finalSpDef = bSpDef + (int)(level * 1.2); // <--- HITUNG
                     int finalSpd = bSpd + (int)(level * 1.2);
 
-                    p = new Pokemon(id, name, t1, level, finalHp, finalAtk, finalDef, finalSpd);
+                    // PANGGIL CONSTRUCTOR BARU (Pastikan Pokemon.java mu udah nerima 10 parameter ini)
+                    p = new Pokemon(id, name, t1, level, finalHp, finalAtk, finalDef, finalSpAtk, finalSpDef, finalSpd);
                     if (t2 != null) p.setType2(t2);
 
-                    // Muat jurus (Moves)
+                    // Muat jurus default bawaan Pokemon liar
                     loadMovesForPokemon(p, conn);
                 }
             }
@@ -56,28 +63,56 @@ public class SaveManager {
     }
 
     private static void loadMovesForPokemon(Pokemon p, Connection conn) throws SQLException {
-        // MENGGUNAKAN JOIN: Gabungkan tabel pokemon_moves dan moves_base
-        String sql = "SELECT mb.name, mb.type, mb.power " +
-                     "FROM pokemon_moves pm " +
+        // 1. Ambil jurus dari database, TAPI URUTKAN DARI POWER PALING GEDE (Jalur VIP!)
+        String sql = "SELECT mb.move_id FROM pokemon_moves pm " +
                      "JOIN moves_base mb ON pm.move_id = mb.move_id " +
-                     "WHERE pm.poke_id = ?";
+                     "WHERE pm.poke_id = ? ORDER BY mb.power DESC"; 
                      
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, p.getPokeId());
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
-                    p.addMove(new Move(
-                        rs.getString("name"),   // Di database namanya 'name', bukan 'move_name'
-                        rs.getString("type"),
-                        rs.getInt("power"),     // Di database namanya 'power', bukan 'damage'
-                        100 
-                    ));
+                    Move m = getMoveById(rs.getInt("move_id"), conn);
+                    if (m != null) p.addMove(m); 
+                    // Karena di Pokemon.java udah dilimit 4, 
+                    // jurus ke-5 (yang powernya paling kecil) otomatis bakal ditolak!
                 }
             }
         }
         
+        // 2. JIKA MASIH KOSONG, BERIKAN JURUS OTOMATIS SESUAI TIPE! (AUTO-ASSIGN)
         if (p.getMoves().isEmpty()) {
-            p.addMove(new Move("Tackle", "Normal", 40, 100));
+            
+            // A. Berikan Basic Attack Wajib: "Tackle"
+            Move tackle = getMoveByName("Tackle", conn);
+            if (tackle != null) p.addMove(tackle);
+            
+            // B. Cari 1 jurus di database yang TIPENYA SAMA dengan tipe Pokemon ini
+            String sqlTipe = "SELECT move_id FROM moves_base WHERE type = ? AND name != 'Tackle' LIMIT 1";
+            try (PreparedStatement psType = conn.prepareStatement(sqlTipe)) {
+                psType.setString(1, p.getType1()); // Ambil elemen Pokemon (FIRE/WATER/GRASS dll)
+                try (ResultSet rsType = psType.executeQuery()) {
+                    if (rsType.next()) {
+                        Move elementalMove = getMoveById(rsType.getInt("move_id"), conn);
+                        if (elementalMove != null) {
+                            p.addMove(elementalMove); // Tambahkan jurus elemennya!
+                        }
+                    }
+                }
+            }
+            
+            // C. (Opsional) Cek tipe kedua kalau dia punya dua elemen
+            if (p.getType2() != null) {
+                try (PreparedStatement psType2 = conn.prepareStatement(sqlTipe)) {
+                    psType2.setString(1, p.getType2());
+                    try (ResultSet rsType2 = psType2.executeQuery()) {
+                        if (rsType2.next()) {
+                            Move elementalMove2 = getMoveById(rsType2.getInt("move_id"), conn);
+                            if (elementalMove2 != null) p.addMove(elementalMove2);
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -134,14 +169,45 @@ public class SaveManager {
 
     public static List<Pokemon> loadPlayerParty() {
         List<Pokemon> party = new ArrayList<>();
-        String sql = "SELECT poke_id, level FROM player_pokemon WHERE player_id = 1";
+        // UPDATE QUERY: Tarik juga HP, Exp, dan 4 Slot Jurus!
+        String sql = "SELECT poke_id, level, current_hp, exp, move1_id, move2_id, move3_id, move4_id FROM player_pokemon WHERE player_id = 1";
+        
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql);
              ResultSet rs = ps.executeQuery()) {
+             
             if (conn == null) return party;
+            
             while (rs.next()) {
                 Pokemon p = loadPokemonById(rs.getInt("poke_id"), rs.getInt("level"));
-                if (p != null) party.add(p);
+                if (p != null) {
+                    // Update darah & EXP sesuai progress save-an player
+                    p.setCurrentHp(rs.getInt("current_hp"));
+                    p.setExp(rs.getInt("exp"));
+                    
+                    // Bersihkan jurus liar bawaan pabrik, ganti sama jurus milik player
+                    p.getMoves().clear();
+                    
+                    int[] moveIds = {
+                        rs.getInt("move1_id"), rs.getInt("move2_id"), 
+                        rs.getInt("move3_id"), rs.getInt("move4_id")
+                    };
+                    
+                    for (int moveId : moveIds) {
+                        if (moveId > 0) {
+                            Move m = getMoveById(moveId, conn); // Panggil fungsi helper baru
+                            if (m != null) p.getMoves().add(m);
+                        }
+                    }
+                    
+                    // Jaga-jaga kalau player belum punya move sama sekali
+                    // Jaga-jaga kalau player belum punya move sama sekali
+                    if (p.getMoves().isEmpty()) {
+                        loadMovesForPokemon(p, conn); // <--- SURUH DIA MANGGIL FUNGSI AUTO-ASSIGN KITA!
+                    }
+                    
+                    party.add(p);
+                }
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -198,5 +264,46 @@ public class SaveManager {
             e.printStackTrace();
             return false;
         }
+    }
+    // Fungsi helper baru untuk menarik detail 1 jurus dari database
+    private static Move getMoveById(int moveId, Connection conn) {
+        String sql = "SELECT name, power, accuracy, type, category FROM moves_base WHERE move_id = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, moveId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    String catStr = rs.getString("category");
+                    Move.Category cat = Move.Category.valueOf(catStr); // Ubah string DB jadi Enum
+                    
+                    // Panggil constructor lengkap Move kamu (nama, power, akurasi, tipe, kategori)
+                    return new Move(
+                        rs.getString("name"),
+                        rs.getInt("power"),
+                        rs.getInt("accuracy"),
+                        rs.getString("type"),
+                        cat
+                    );
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+    
+    // Fungsi pembantu untuk mencari move berdasarkan Nama
+    private static Move getMoveByName(String moveName, Connection conn) {
+        String sql = "SELECT move_id FROM moves_base WHERE name = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, moveName);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return getMoveById(rs.getInt("move_id"), conn);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 }

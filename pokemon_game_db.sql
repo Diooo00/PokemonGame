@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: May 19, 2026 at 09:22 PM
+-- Generation Time: May 26, 2026 at 08:53 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -58,37 +58,51 @@ CREATE TABLE `moves_base` (
   `name` varchar(50) NOT NULL,
   `power` int(11) NOT NULL,
   `accuracy` int(11) NOT NULL,
+  `max_pp` int(11) NOT NULL DEFAULT 20,
   `type` varchar(20) NOT NULL,
-  `category` enum('PHYSICAL','SPECIAL') NOT NULL
+  `category` enum('PHYSICAL','SPECIAL') NOT NULL,
+  `effect_chance` int(11) DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `moves_base`
 --
 
-INSERT INTO `moves_base` (`move_id`, `name`, `power`, `accuracy`, `type`, `category`) VALUES
-(1, 'Tackle', 40, 100, 'NORMAL', 'PHYSICAL'),
-(2, 'Ember', 40, 100, 'FIRE', 'SPECIAL'),
-(3, 'Water Gun', 40, 100, 'WATER', 'SPECIAL'),
-(4, 'Vine Whip', 45, 100, 'GRASS', 'PHYSICAL'),
-(7, 'Flamethrower', 90, 100, 'FIRE', 'SPECIAL'),
-(8, 'Thunderbolt', 90, 100, 'ELECTRIC', 'SPECIAL'),
-(9, 'Surf', 90, 100, 'WATER', 'SPECIAL'),
-(10, 'Earthquake', 100, 100, 'GROUND', 'PHYSICAL'),
-(11, 'Ice Beam', 90, 100, 'ICE', 'SPECIAL'),
-(12, 'Psychic', 90, 100, 'PSYCHIC', 'SPECIAL'),
-(13, 'Solar Beam', 120, 100, 'GRASS', 'SPECIAL'),
-(14, 'Dragon Claw', 80, 100, 'DRAGON', 'PHYSICAL'),
-(15, 'Shadow Ball', 80, 100, 'GHOST', 'SPECIAL'),
-(16, 'Hyper Beam', 150, 90, 'NORMAL', 'SPECIAL'),
-(17, 'Sludge Bomb', 90, 100, 'POISON', 'SPECIAL'),
-(18, 'Fly', 90, 95, 'FLYING', 'PHYSICAL'),
-(19, 'Brick Break', 75, 100, 'FIGHTING', 'PHYSICAL'),
-(20, 'Rock Slide', 75, 90, 'ROCK', 'PHYSICAL'),
-(21, 'X-Scissor', 80, 100, 'BUG', 'PHYSICAL'),
-(22, 'Iron Tail', 100, 75, 'STEEL', 'PHYSICAL'),
-(23, 'Dark Pulse', 80, 100, 'DARK', 'SPECIAL'),
-(24, 'Moonblast', 95, 100, 'FAIRY', 'SPECIAL');
+INSERT INTO `moves_base` (`move_id`, `name`, `power`, `accuracy`, `max_pp`, `type`, `category`, `effect_chance`) VALUES
+(1, 'Tackle', 40, 100, 35, 'NORMAL', 'PHYSICAL', 0),
+(2, 'Ember', 40, 100, 25, 'FIRE', 'SPECIAL', 0),
+(3, 'Water Gun', 40, 100, 25, 'WATER', 'SPECIAL', 0),
+(4, 'Vine Whip', 45, 100, 25, 'GRASS', 'PHYSICAL', 0),
+(7, 'Flamethrower', 90, 100, 15, 'FIRE', 'SPECIAL', 0),
+(8, 'Thunderbolt', 90, 100, 15, 'ELECTRIC', 'SPECIAL', 0),
+(9, 'Surf', 90, 100, 15, 'WATER', 'SPECIAL', 0),
+(10, 'Earthquake', 100, 100, 20, 'GROUND', 'PHYSICAL', 0),
+(11, 'Ice Beam', 90, 100, 15, 'ICE', 'SPECIAL', 0),
+(12, 'Psychic', 90, 100, 20, 'PSYCHIC', 'SPECIAL', 0),
+(13, 'Solar Beam', 120, 100, 20, 'GRASS', 'SPECIAL', 0),
+(14, 'Dragon Claw', 80, 100, 20, 'DRAGON', 'PHYSICAL', 0),
+(15, 'Shadow Ball', 80, 100, 20, 'GHOST', 'SPECIAL', 0),
+(16, 'Hyper Beam', 150, 90, 5, 'NORMAL', 'SPECIAL', 0),
+(17, 'Sludge Bomb', 90, 100, 20, 'POISON', 'SPECIAL', 0),
+(18, 'Fly', 90, 95, 20, 'FLYING', 'PHYSICAL', 0),
+(19, 'Brick Break', 75, 100, 20, 'FIGHTING', 'PHYSICAL', 0),
+(20, 'Rock Slide', 75, 90, 20, 'ROCK', 'PHYSICAL', 0),
+(21, 'X-Scissor', 80, 100, 20, 'BUG', 'PHYSICAL', 0),
+(22, 'Iron Tail', 100, 75, 20, 'STEEL', 'PHYSICAL', 0),
+(23, 'Dark Pulse', 80, 100, 20, 'DARK', 'SPECIAL', 0),
+(24, 'Moonblast', 95, 100, 15, 'FAIRY', 'SPECIAL', 0),
+(25, 'V-create', 180, 95, 5, 'FIRE', 'PHYSICAL', 0),
+(26, 'Night Daze', 85, 95, 10, 'DARK', 'SPECIAL', 40),
+(27, 'Gear Grind', 100, 85, 15, 'STEEL', 'PHYSICAL', 0),
+(28, 'Fiery Dance', 80, 100, 10, 'FIRE', 'SPECIAL', 50),
+(29, 'Blue Flare', 130, 85, 5, 'FIRE', 'SPECIAL', 20),
+(30, 'Fusion Flare', 100, 100, 5, 'FIRE', 'SPECIAL', 0),
+(31, 'Bolt Strike', 130, 85, 5, 'ELECTRIC', 'PHYSICAL', 20),
+(32, 'Fusion Bolt', 100, 100, 5, 'ELECTRIC', 'PHYSICAL', 0),
+(33, 'Glaciate', 65, 95, 10, 'ICE', 'SPECIAL', 100),
+(34, 'Secret Sword', 85, 100, 10, 'FIGHTING', 'SPECIAL', 0),
+(35, 'Relic Song', 75, 100, 10, 'NORMAL', 'SPECIAL', 10),
+(36, 'Techno Blast', 120, 100, 5, 'NORMAL', 'SPECIAL', 0);
 
 -- --------------------------------------------------------
 
@@ -127,23 +141,34 @@ CREATE TABLE `player_pokemon` (
   `poke_id` int(11) DEFAULT NULL,
   `level` int(11) DEFAULT 5,
   `current_hp` int(11) DEFAULT NULL,
-  `exp` int(11) DEFAULT 0
+  `exp` int(11) DEFAULT 0,
+  `move1_id` int(11) DEFAULT NULL,
+  `move1_pp` int(11) DEFAULT NULL,
+  `move2_id` int(11) DEFAULT NULL,
+  `move2_pp` int(11) DEFAULT NULL,
+  `move3_id` int(11) DEFAULT NULL,
+  `move3_pp` int(11) DEFAULT NULL,
+  `move4_id` int(11) DEFAULT NULL,
+  `move4_pp` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `player_pokemon`
 --
 
-INSERT INTO `player_pokemon` (`instance_id`, `player_id`, `poke_id`, `level`, `current_hp`, `exp`) VALUES
-(1, 1, 498, 5, 85, 0),
-(2, 1, 495, 6, 67, 0),
-(3, 1, 501, 5, 75, 0),
-(4, 1, 620, 5, 85, 0),
-(5, 1, 612, 7, 100, 0),
-(6, 1, 543, 3, 46, 0),
-(7, 1, 617, 5, 100, 0),
-(8, 1, 640, 3, 107, 0),
-(9, 1, 639, 4, 109, 60);
+INSERT INTO `player_pokemon` (`instance_id`, `player_id`, `poke_id`, `level`, `current_hp`, `exp`, `move1_id`, `move1_pp`, `move2_id`, `move2_pp`, `move3_id`, `move3_pp`, `move4_id`, `move4_pp`) VALUES
+(1, 1, 498, 5, 85, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(2, 1, 495, 6, 48, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(3, 1, 501, 5, 39, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(4, 1, 620, 5, 85, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(5, 1, 612, 8, 105, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(6, 1, 543, 3, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(7, 1, 617, 5, 82, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(8, 1, 640, 4, 100, 60, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(9, 1, 639, 5, 106, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(10, 1, 643, 12, 137, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(11, 1, 635, 4, 97, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(12, 1, 637, 5, 105, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -594,7 +619,27 @@ INSERT INTO `pokemon_moves` (`poke_id`, `move_id`, `level_learned`) VALUES
 (646, 11, NULL),
 (647, 19, NULL),
 (648, 12, NULL),
-(649, 22, NULL);
+(649, 22, NULL),
+(494, 1, NULL),
+(494, 25, NULL),
+(571, 1, NULL),
+(571, 26, NULL),
+(601, 1, NULL),
+(601, 27, NULL),
+(637, 1, NULL),
+(637, 28, NULL),
+(643, 30, NULL),
+(643, 29, NULL),
+(644, 32, NULL),
+(644, 31, NULL),
+(646, 1, NULL),
+(646, 33, NULL),
+(647, 1, NULL),
+(647, 34, NULL),
+(648, 1, NULL),
+(648, 35, NULL),
+(649, 1, NULL),
+(649, 36, NULL);
 
 --
 -- Indexes for dumped tables
@@ -659,13 +704,13 @@ ALTER TABLE `items`
 -- AUTO_INCREMENT for table `moves_base`
 --
 ALTER TABLE `moves_base`
-  MODIFY `move_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
+  MODIFY `move_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=37;
 
 --
 -- AUTO_INCREMENT for table `player_pokemon`
 --
 ALTER TABLE `player_pokemon`
-  MODIFY `instance_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `instance_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- AUTO_INCREMENT for table `player_save`

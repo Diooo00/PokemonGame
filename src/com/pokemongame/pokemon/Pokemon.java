@@ -26,6 +26,8 @@ public class Pokemon {
     protected int currentHp;
     protected int attack;
     protected int defense;
+    protected int spAtk;
+    protected int spDef;
     protected int speed;
 
     // Tipe (Gunakan String agar fleksibel dengan 18 tipe Gen 5 di DB)
@@ -35,9 +37,9 @@ public class Pokemon {
     protected List<Move> moves;
 
     /**
-     * CONSTRUCTOR UTAMA: 8 Parameter agar sinkron dengan SaveManager.
+     * CONSTRUCTOR UTAMA: 10 Parameter agar sinkron dengan SaveManager.
      */
-    public Pokemon(int pokeId, String name, String type1, int level, int hp, int atk, int def, int spd) {
+    public Pokemon(int pokeId, String name, String type1, int level, int hp, int atk, int def, int spAtk, int spDef, int spd) {
         this.pokeId = pokeId;
         this.name = name;
         this.type1 = type1.toUpperCase();
@@ -46,6 +48,8 @@ public class Pokemon {
         this.currentHp = hp;
         this.attack = atk;
         this.defense = def;
+        this.spAtk = spAtk; // Nah ini sekarang udah nyambung
+        this.spDef = spDef; // Ini juga udah nyambung
         this.speed = spd;
         this.moves = new ArrayList<>();
     }
@@ -209,6 +213,20 @@ public class Pokemon {
 
     public void setDefense(int defense) {
         this.defense = defense;
+    }
+    
+    public int getSpAtk() {
+        return spAtk; 
+    }
+    public void setSpAtk(int spAtk) {
+        this.spAtk = spAtk; 
+    }
+
+    public int getSpDef() {
+        return spDef;
+    }
+    public void setSpDef(int spDef) {
+        this.spDef = spDef;
     }
 
     public int getSpeed() {

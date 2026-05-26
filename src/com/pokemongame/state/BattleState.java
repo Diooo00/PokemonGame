@@ -11,7 +11,9 @@ import com.pokemongame.pokemon.Pokemon;
 import com.pokemongame.ui.HUD;
 import com.pokemongame.util.SaveManager;
 import com.pokemongame.util.SpriteLoader;
+import com.pokemongame.util.BattleMechanics;
 import com.pokemongame.item.Item;
+import com.pokemongame.util.TypeChart;
 import java.awt.AlphaComposite;
 
 import java.awt.GraphicsEnvironment;
@@ -74,6 +76,8 @@ public class BattleState extends GameState {
     private String battleMessage = "";
     private int messageTimer = 0;
     private static final int MESSAGE_DURATION = 90;
+    
+    public String effectMessage = "";
 
     public BattleState(GamePanel gp, Pokemon playerP, Pokemon enemyP, GameState previousState) {
         super(gp);
@@ -322,12 +326,54 @@ public class BattleState extends GameState {
         }
     }
 
-    private void playerAttackAction() {
+private void playerAttackAction() {
         subState = SubState.MESSAGE_ONLY;
-        int damage = playerPokemon.calculateDamage(playerChosenMove);
-        enemyPokemon.takeDamage(damage, playerChosenMove.getType());
+
+        // 1. TENTUKAN STAT PHYSICAL ATAU SPECIAL
+        int atkStat = 0;
+        int defStat = 0;
         
+        if (playerChosenMove.getCategory() == Move.Category.PHYSICAL) {
+            atkStat = playerPokemon.getAttack();
+            defStat = enemyPokemon.getDefense();
+        } else {
+            atkStat = playerPokemon.getSpAtk();
+            defStat = enemyPokemon.getSpDef();
+        }
+
+        // 2. SISTEM ABILITY AKTIF (Darah Merah = Damage Elemen Naik 1.5x)
+        double abilityMod = 1.0;
+        if (playerPokemon.getCurrentHp() <= playerPokemon.getMaxHp() / 3) {
+            String pType = playerPokemon.getType1();
+            String mType = playerChosenMove.getType();
+            if (pType.equals("FIRE") && mType.equals("FIRE")) abilityMod = 1.5;
+            else if (pType.equals("WATER") && mType.equals("WATER")) abilityMod = 1.5;
+            else if (pType.equals("GRASS") && mType.equals("GRASS")) abilityMod = 1.5;
+        }
+
+        // 3. HITUNG MULTIPLIER TIPE (STAB & Super Effective)
+        double stab = TypeChart.getStabMultiplier(playerPokemon, playerChosenMove);
+        double typeMod = TypeChart.getEffectiveness(playerChosenMove.getType(), enemyPokemon.getType1());
+        if (enemyPokemon.getType2() != null) {
+            typeMod *= TypeChart.getEffectiveness(playerChosenMove.getType(), enemyPokemon.getType2());
+        }
+
+        // 4. HITUNG DAMAGE PAKAI BATTLE MECHANICS BARU
+        int damage = BattleMechanics.calculateDamage(
+            playerPokemon.getLevel(), atkStat, defStat, playerChosenMove.getPower(), stab, typeMod, abilityMod
+        );
+
+        // 5. KURANGI HP MUSUH
+        enemyPokemon.setCurrentHp(enemyPokemon.getCurrentHp() - damage);
+        if (enemyPokemon.getCurrentHp() < 0) enemyPokemon.setCurrentHp(0);
+        
+        // 6. MUNCULKAN TEKS NOTIFIKASI DI LAYAR
         battleMessage = playerPokemon.getName() + " used " + playerChosenMove.getName() + "!";
+        if (typeMod > 1.0) effectMessage = "It's super effective!";
+        else if (typeMod < 1.0 && typeMod > 0) effectMessage = "It's not very effective...";
+        else if (typeMod == 0.0) effectMessage = "It had no effect...";
+        else effectMessage = "";
+        
         messageTimer = MESSAGE_DURATION;
         shakeTimer = 20; 
         gamePanel.playSoundEffect("res/sound/hit.wav");
@@ -339,10 +385,52 @@ public class BattleState extends GameState {
 
         subState = SubState.MESSAGE_ONLY;
         Move move = enemyMoves.get((int) (Math.random() * enemyMoves.size()));
-        int damage = enemyPokemon.calculateDamage(move);
-        playerPokemon.takeDamage(damage, move.getType());
 
-        battleMessage = "Wild " + enemyPokemon.getName() + " used " + move.getName() + "!";
+        // 1. TENTUKAN STAT PHYSICAL / SPECIAL MUSUH
+        int atkStat = 0;
+        int defStat = 0;
+        
+        if (move.getCategory() == Move.Category.PHYSICAL) {
+            atkStat = enemyPokemon.getAttack();
+            defStat = playerPokemon.getDefense();
+        } else {
+            atkStat = enemyPokemon.getSpAtk();
+            defStat = playerPokemon.getSpDef();
+        }
+
+        // 2. SISTEM ABILITY MUSUH
+        double abilityMod = 1.0;
+        if (enemyPokemon.getCurrentHp() <= enemyPokemon.getMaxHp() / 3) {
+            String pType = enemyPokemon.getType1();
+            String mType = move.getType();
+            if (pType.equals("FIRE") && mType.equals("FIRE")) abilityMod = 1.5;
+            else if (pType.equals("WATER") && mType.equals("WATER")) abilityMod = 1.5;
+            else if (pType.equals("GRASS") && mType.equals("GRASS")) abilityMod = 1.5;
+        }
+
+        // 3. HITUNG MULTIPLIER TIPE (STAB & Super Effective)
+        double stab = TypeChart.getStabMultiplier(enemyPokemon, move);
+        double typeMod = TypeChart.getEffectiveness(move.getType(), playerPokemon.getType1());
+        if (playerPokemon.getType2() != null) {
+            typeMod *= TypeChart.getEffectiveness(move.getType(), playerPokemon.getType2());
+        }
+
+        // 4. HITUNG DAMAGE FINAL
+        int damage = BattleMechanics.calculateDamage(
+            enemyPokemon.getLevel(), atkStat, defStat, move.getPower(), stab, typeMod, abilityMod
+        );
+
+        // 5. KURANGI HP PLAYER
+        playerPokemon.setCurrentHp(playerPokemon.getCurrentHp() - damage);
+        if (playerPokemon.getCurrentHp() < 0) playerPokemon.setCurrentHp(0);
+
+        // 6. TEKS NOTIFIKASI
+        battleMessage = "Wild " + enemyPokemon.getName() + " used " + move.getName() + "!";        if (typeMod > 1.0) effectMessage = "It's super effective!";
+        if (typeMod > 1.0) effectMessage = "It's super effective!";
+        else if (typeMod < 1.0 && typeMod > 0) effectMessage = "It's not very effective...";
+        else if (typeMod == 0.0) effectMessage = "It had no effect...";
+        else effectMessage = "";
+        
         messageTimer = MESSAGE_DURATION;
         gamePanel.playSoundEffect("res/sound/hit.wav");
     }
@@ -354,31 +442,14 @@ public class BattleState extends GameState {
             return;
         }
 
+        // --- UBAH NAVIGASI JADI VERTIKAL (ATAS & BAWAH SAJA) ---
         if (keyHandler.upPressed) {
             keyHandler.upPressed = false;
-            if (selectedItem >= 2) {
-                selectedItem -= 2;
-            }
+            if (selectedItem > 0) selectedItem--; 
         }
         if (keyHandler.downPressed) {
             keyHandler.downPressed = false;
-            if (selectedItem + 2 < itemCount) {
-                selectedItem += 2;
-            }
-        }
-        if (keyHandler.leftPressed) {
-            keyHandler.leftPressed = false;
-            if (selectedItem % 2 != 0) {
-                selectedItem -= 1; // Pindah dari kolom kanan ke kiri
-            } else if (selectedItem >= 2) {
-                selectedItem -= 1; // Opsional: kalau di kiri mencet kiri, naik ke baris atasnya
-            }
-        }
-        if (keyHandler.rightPressed) {
-            keyHandler.rightPressed = false;
-            if (selectedItem % 2 == 0 && selectedItem + 1 < itemCount) {
-                selectedItem += 1; // Pindah dari kolom kiri ke kanan
-            }
+            if (selectedItem < itemCount - 1) selectedItem++;
         }
 
         if (keyHandler.actionPressed) {
@@ -545,6 +616,10 @@ public class BattleState extends GameState {
         keyHandler.backPressed = false;
         keyHandler.upPressed = false;
         keyHandler.downPressed = false;
+        
+        this.selectedMove = 0; 
+        
+        this.effectMessage = "";
     }
     
     @Override
@@ -570,8 +645,7 @@ public class BattleState extends GameState {
         g2d.drawRoundRect(boxX, bottomY, boxW, 110, 15, 15);
 
         if (!battleMessage.isEmpty()) {
-            g2d.setFont(pokemonFont.deriveFont(16f)); 
-            g2d.drawString(battleMessage, boxX + 40, bottomY + 65);
+            hud.renderDialogBox(g2d, battleMessage, effectMessage, pokemonFont);
         } else {
             renderStatusCard(g2d, boxX, bottomY, playerPokemon, false);
         }
