@@ -197,35 +197,80 @@ public class HUD {
     }
 
     public void renderPartyMenu(Graphics2D g2d, List<Pokemon> party, int selected, Font font) {
-        // Gambar background overlay transparan biar fokus ke menu
-        g2d.setColor(new Color(0, 0, 0, 180));
+        // Background transparan
+        g2d.setColor(new Color(0, 0, 0, 200));
         g2d.fillRect(0, 0, GamePanel.SCREEN_WIDTH, GamePanel.SCREEN_HEIGHT);
 
-        // Gambar kotak utama di tengah
+        // Kotak gede
         int boxX = 50, boxY = 50, boxW = GamePanel.SCREEN_WIDTH - 100, boxH = GamePanel.SCREEN_HEIGHT - 100;
         drawWindow(g2d, boxX, boxY, boxW, boxH);
 
-        if (font != null) g2d.setFont(font.deriveFont(20f));
+        if (font != null) g2d.setFont(font.deriveFont(24f));
         g2d.setColor(Color.WHITE);
-        g2d.drawString("--- PARTY POKEMON ---", boxX + 30, boxY + 40);
+        g2d.drawString("--- POKEMON STORAGE ---", boxX + 30, boxY + 45);
 
-        for (int i = 0; i < party.size(); i++) {
-            int yPos = boxY + 80 + (i * 60);
+        // --- SISTEM SLIDER (9 BARIS x 3 KOLOM) ---
+        int maxRows = 9; 
+        int maxCols = 3;
+        int itemsPerPage = maxRows * maxCols; // 27 Pokemon per halaman
+        
+        int currentPage = selected / itemsPerPage; 
+        int startIdx = currentPage * itemsPerPage;
+        int endIdx = Math.min(startIdx + itemsPerPage, party.size());
+
+        // Pengaturan Jarak
+        int colWidth = 550; // Jarak horizontal tetap
+        int rowHeight = 90; // Dirapetin dikit biar baris ke-9 nggak mentok bawah
+
+        for (int i = startIdx; i < endIdx; i++) {
+            int displayIdx = i - startIdx; 
+            int col = displayIdx / maxRows; // Nentuin kolom 0, 1, 2
+            int row = displayIdx % maxRows; // Nentuin baris 0 sampai 8
+            
+            int xPos = boxX + 60 + (col * colWidth);
+            int yPos = boxY + 105 + (row * rowHeight); // Y start dinaikin dikit biar lega
+
+            // 1. Gambar Kursor
             if (i == selected) {
-                drawCursor(g2d, boxX + 20, yPos - 5);
+                drawCursor(g2d, xPos - 25, yPos - 5);
                 g2d.setColor(Color.YELLOW);
             } else {
                 g2d.setColor(Color.WHITE);
             }
-            g2d.drawString(party.get(i).getName().toUpperCase() + "  Lv" + party.get(i).getLevel(), boxX + 50, yPos);
-            g2d.setFont(font.deriveFont(12f));
-            g2d.drawString("HP: " + party.get(i).getCurrentHp() + "/" + party.get(i).getMaxHp(), boxX + 50, yPos + 20);
-            if (font != null) g2d.setFont(font.deriveFont(20f)); // Balikin font size
+            
+            // 2. Teks Nama & Level
+            if (font != null) g2d.setFont(font.deriveFont(18f));
+            g2d.drawString(party.get(i).getName().toUpperCase() + "  Lv" + party.get(i).getLevel(), xPos, yPos);
+            
+            // 3. Teks HP
+            if (font != null) g2d.setFont(font.deriveFont(12f));
+            g2d.setColor(Color.LIGHT_GRAY);
+            g2d.drawString("HP: " + party.get(i).getCurrentHp() + "/" + party.get(i).getMaxHp(), xPos, yPos + 22);
+            
+            // 4. Bar HP Mini
+            int barW = 120, barH = 8;
+            g2d.setColor(new Color(60, 60, 60)); 
+            g2d.fillRect(xPos, yPos + 30, barW, barH);
+            
+            double hpRatio = (double) party.get(i).getCurrentHp() / party.get(i).getMaxHp();
+            if (hpRatio < 0) hpRatio = 0;
+            int fillW = (int)(barW * hpRatio);
+            
+            if (hpRatio > 0.5) g2d.setColor(new Color(65, 225, 65)); 
+            else if (hpRatio > 0.2) g2d.setColor(Color.YELLOW);      
+            else g2d.setColor(Color.RED);                            
+            
+            g2d.fillRect(xPos, yPos + 30, fillW, barH);
         }
 
-        g2d.setFont(font.deriveFont(14f));
+        // --- TOMBOL KEMBALI ---
+        if (font != null) g2d.setFont(font.deriveFont(16f));
         g2d.setColor(Color.WHITE);
-        g2d.drawString("[X] BACK", boxX + 30, boxY + boxH - 20);
+        g2d.drawString("[X] BACK", boxX + 30, boxY + boxH - 25);
+        
+        // --- INDIKATOR HALAMAN ---
+        int totalPages = (party.size() > 0) ? ((party.size() - 1) / itemsPerPage) + 1 : 1;
+        g2d.drawString("PAGE " + (currentPage + 1) + " / " + totalPages, boxX + boxW - 160, boxY + boxH - 25);
     }
     
     // --- METHOD BANTUAN UNTUK GAMBAR PANAH SCROLL ---

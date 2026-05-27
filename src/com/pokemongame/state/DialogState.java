@@ -42,27 +42,29 @@ public class DialogState extends GameState {
     public void update() {
         dialogBox.update();
 
-        // Deteksi tekan tombol aksi (hindari hold)
-        if (keyHandler.actionPressed && !actionWasPressed) {
-            actionWasPressed = true;
+        // --- JURUS PENGHANCUR SINYAL TOMBOL (VERSI DIALOG) ---
+        if (keyHandler.actionPressed) {
+            if (!actionWasPressed) {
+                actionWasPressed = true;
+                keyHandler.actionPressed = false; // MANTRA SAKTI: Hancurkan sinyal!
 
-            if (!dialogBox.isFinished()) {
-                // Skip typewriter — langsung tampil penuh
-                dialogBox.skipToEnd();
-            } else {
-                // Lanjut ke baris dialog berikutnya
-                npc.nextDialog();
-                if (npc.hasMoreDialog()) {
-                    dialogBox.setText(npc.getCurrentDialog());
+                if (!dialogBox.isFinished()) {
+                    // Skip typewriter — langsung tampil penuh
+                    dialogBox.skipToEnd();
                 } else {
-                    // Dialog habis — kembali ke state sebelumnya
-                    npc.resetDialog();
-                    gamePanel.setCurrentState(previousState);
+                    // Lanjut ke baris dialog berikutnya
+                    npc.nextDialog();
+                    if (npc.hasMoreDialog()) {
+                        dialogBox.setText(npc.getCurrentDialog());
+                    } else {
+                        // Dialog habis — kembali ke state sebelumnya
+                        npc.resetDialog();
+                        gamePanel.setCurrentState(previousState);
+                    }
                 }
             }
-        }
-
-        if (!keyHandler.actionPressed) {
+        } else {
+            // Buka gembok kalau tombol dilepas
             actionWasPressed = false;
         }
     }

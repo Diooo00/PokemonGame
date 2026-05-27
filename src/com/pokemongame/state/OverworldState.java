@@ -35,6 +35,7 @@ public class OverworldState extends GameState {
     private final int MAX_TRANSITION_TIME = 180; // 1 detik (60 frame)
     private Pokemon pendingWildPokemon;
     private Pokemon pendingPlayerActive;
+    private boolean actionWasPressed = false;
 
     public OverworldState(GamePanel gamePanel) {
         super(gamePanel);
@@ -59,32 +60,65 @@ public class OverworldState extends GameState {
         }
 
         if (player != null) {
-            player.update();
-            camera.update(player);
-            checkWildEncounter();
+            
+            // --- JURUS PENGHANCUR SINYAL TOMBOL ---
+            if (keyHandler.actionPressed) {
+                if (!actionWasPressed) {
+                    actionWasPressed = true; 
+                    keyHandler.actionPressed = false; // MANTRA SAKTI: Hancurkan sinyal setelah dipakai!
+                    checkNPCDialogInteraction();
+                }
+            } else {
+                actionWasPressed = false; // Buka gembok kalau tombol dilepas
+            }
             
             if (keyHandler.backPressed) {
                 keyHandler.backPressed = false;
                 SaveManager.saveGame(player);
                 System.out.println("Game koordinat berhasil disimpan ke Database!");
             }
-            
-            if (keyHandler.actionPressed) {
-                keyHandler.actionPressed = false;
-                checkNPCDialogInteraction();
-            }
+
+            player.update();
+            camera.update(player);
+            checkWildEncounter();
         }
     }
-    
+
     private void checkNPCDialogInteraction() {
-        for (NPC npc : npcs) {
+        for (int i = 0; i < npcs.length; i++) {
+            NPC npc = npcs[i];
+            
             if (npc != null) {
-                int diffX = Math.abs(player.worldX - npc.worldX);
-                int diffY = Math.abs(player.worldY - npc.worldY);
+                int pCenterX = player.worldX + (GamePanel.TILE_SIZE / 2);
+                int pCenterY = player.worldY + (GamePanel.TILE_SIZE / 2);
+                int npcCenterX = npc.worldX + (GamePanel.TILE_SIZE / 2);
+                int npcCenterY = npc.worldY + (GamePanel.TILE_SIZE / 2);
                 
-                if (diffX <= GamePanel.TILE_SIZE && diffY <= GamePanel.TILE_SIZE) {
-                    npc.speak(); 
-                    break;
+                int diffX = pCenterX - npcCenterX;
+                int diffY = pCenterY - npcCenterY;
+                int absX = Math.abs(diffX);
+                int absY = Math.abs(diffY);
+                
+                if (absX <= GamePanel.TILE_SIZE * 1.5 && absY <= GamePanel.TILE_SIZE * 1.5) {
+                    boolean isFacingNPC = false;
+                    String dir = player.direction.toLowerCase(); 
+                    
+                    if (dir.equals("up") && diffY > 0 && absX <= absY) isFacingNPC = true;
+                    if (dir.equals("down") && diffY < 0 && absX <= absY) isFacingNPC = true;
+                    if (dir.equals("left") && diffX > 0 && absY <= absX) isFacingNPC = true;
+                    if (dir.equals("right") && diffX < 0 && absY <= absX) isFacingNPC = true;
+                    
+                    if (isFacingNPC) {
+                        if (i == 0) {
+                            java.util.List<Pokemon> myParty = SaveManager.loadPlayerParty();
+                            SaveManager.healAndReviveParty(myParty);
+                            gamePanel.setCurrentState(new DialogState(gamePanel, npc, this));
+                        } 
+                        else if (i == 1) {
+                            gamePanel.setCurrentState(new ShopState(gamePanel, this));
+                        }
+                        return; 
+                    } 
                 }
             }
         }
@@ -205,8 +239,16 @@ public class OverworldState extends GameState {
     }
 
     private void setupNPCs() {
-        String[] dialog = {"Halo!", "Selamat datang di dunia Pokemon.", "Semoga harimu menyenangkan!"};
-        npcs[0] = new NPC(gamePanel, GamePanel.TILE_SIZE * 15, GamePanel.TILE_SIZE * 15, dialog);
+        // Dialog ala Pokemon Center beneran!
+        String[] dialog = {
+            "Welcome to our Pokemon Center!", 
+            "We have restored your Pokemon to full health!", 
+            "We hope to see you again!"
+        };
+        npcs[0] = new NPC(gamePanel, GamePanel.TILE_SIZE * 24, GamePanel.TILE_SIZE * 47, dialog, "nurse_joy");
+        
+        String[] dialogToko = {"Beli apa bang?"};
+        npcs[1] = new NPC(gamePanel, GamePanel.TILE_SIZE * 26, GamePanel.TILE_SIZE * 47, dialogToko, "shop_keeper");
     }
     
     public NPC[] getNPCs() {

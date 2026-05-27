@@ -5,27 +5,52 @@
 package com.pokemongame.entity;
 
 import com.pokemongame.main.GamePanel;
-
 import java.awt.Color;
 import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import javax.imageio.ImageIO;
 
 /**
  *
  * @author thety
  */
 public class NPC extends Entity {
-
+    
+    // Tiap NPC sekarang punya gambarnya sendiri-sendiri!
+    private BufferedImage sprite; 
     private String[] dialogLines;
     private int dialogIndex = 0;
-    private int dialogueIndex = 0;
-    private String[] dialogues;
-
-    public NPC(GamePanel gamePanel, int worldX, int worldY, String[] dialogLines) {
+    
+    // --- CONSTRUCTOR BARU: Minta parameter String spriteName ---
+    public NPC(GamePanel gamePanel, int worldX, int worldY, String[] dialogLines, String spriteName) {
         super(gamePanel);
         this.worldX = worldX;
         this.worldY = worldY;
         this.dialogLines = dialogLines;
-        this.speed = 0; // NPC tidak bergerak untuk sekarang
+        this.speed = 0; 
+        
+        loadSprite(spriteName); // Panggil fungsi buat muat gambar
+    }
+
+    // --- FUNGSI MUAT GAMBAR ---
+    private void loadSprite(String spriteName) {
+        try {
+            // Bakal nyari file sesuai nama, misal "res/sprites/nurse_joy.png"
+            File file = new File("res/sprites/" + spriteName + ".png");
+            BufferedImage sheet = ImageIO.read(file);
+            
+            // Kita pakai gambar utuh. 
+            // (Kalau ternyata pas di-Run gambarnya kelebaran / dempet 2 orang, 
+            // kabarin aku ya, nanti gampang tinggal kita potong kodingannya)
+            this.sprite = sheet; 
+            
+        } catch (Exception e) {
+            System.err.println("EROR: Gagal memuat sprite NPC -> " + spriteName);
+            e.printStackTrace();
+            this.sprite = null;
+        }
     }
 
     @Override
@@ -33,28 +58,40 @@ public class NPC extends Entity {
         // NPC statis — tidak ada logika gerak untuk sekarang
     }
 
+    public void speak() {
+        System.out.println("NPC: " + dialogLines[dialogIndex]);
+        dialogIndex++;
+        if (dialogIndex >= dialogLines.length) {
+            dialogIndex = 0; 
+        }
+    }
+
+    public void render(Graphics2D g2d) {
+        g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR);
+        
+        int cameraX = gamePanel.getCamera().x;
+        int cameraY = gamePanel.getCamera().y;
+
+        int screenX = worldX - cameraX;
+        int screenY = worldY - cameraY;
+
+        if (sprite != null) {
+            g2d.drawImage(sprite, screenX, screenY, GamePanel.TILE_SIZE, GamePanel.TILE_SIZE, null);
+        } else {
+            g2d.setColor(Color.GRAY);
+            g2d.fillRect(screenX, screenY, GamePanel.TILE_SIZE, GamePanel.TILE_SIZE);
+            g2d.setColor(Color.RED);
+            g2d.drawLine(screenX, screenY, screenX + GamePanel.TILE_SIZE, screenY + GamePanel.TILE_SIZE);
+            g2d.drawLine(screenX + GamePanel.TILE_SIZE, screenY, screenX, screenY + GamePanel.TILE_SIZE);
+        }
+    }
+    
+    // --- KUMPULAN FUNGSI DIALOG ---
     public String getCurrentDialog() {
-        if (dialogIndex < dialogLines.length) {
+        if (dialogLines != null && dialogIndex < dialogLines.length) {
             return dialogLines[dialogIndex];
         }
         return null;
-    }
-    
-    public void speak() {
-        if (dialogues != null && dialogues.length > 0) {
-            // Menampilkan dialog ke console untuk memastikan kodenya bekerja
-            System.out.println("NPC: " + dialogues[dialogueIndex]);
-
-            // Logika sederhana: ganti ke baris dialog berikutnya saat ditekan lagi
-            dialogueIndex++;
-            if (dialogueIndex >= dialogues.length) {
-                dialogueIndex = 0; // Reset ke dialog pertama jika sudah habis
-            }
-
-            // JIKA kamu punya UI Dialogue Box di GamePanel, kamu bisa memicunya di sini:
-            // gamePanel.ui.currentDialogue = dialogues[dialogueIndex];
-            // gamePanel.gameState = gamePanel.DIALOGUE_STATE;
-        }
     }
 
     public void nextDialog() {
@@ -62,30 +99,10 @@ public class NPC extends Entity {
     }
 
     public boolean hasMoreDialog() {
-        return dialogIndex < dialogLines.length;
+        return dialogLines != null && dialogIndex < dialogLines.length;
     }
 
     public void resetDialog() {
         dialogIndex = 0;
     }
-
-    public void render(Graphics2D g2d) {
-        // kosong — NPC selalu render dengan camera
-    }
-
-    @Override
-    public void render(Graphics2D g2d, int cameraX, int cameraY) {
-        int screenX = worldX - cameraX;
-        int screenY = worldY - cameraY;
-
-        // Placeholder — kotak coklat
-        g2d.setColor(new Color(139, 90, 43));
-        g2d.fillRect(screenX, screenY,
-                     GamePanel.TILE_SIZE, GamePanel.TILE_SIZE);
-
-        // Tanda kepala
-        g2d.setColor(new Color(255, 220, 177));
-        g2d.fillOval(screenX + 8, screenY + 2, 16, 16);
-    }
 }
-

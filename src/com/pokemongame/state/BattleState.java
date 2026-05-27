@@ -39,6 +39,10 @@ public class BattleState extends GameState {
 
     private int shakeTimer = 0; 
     
+    private String lastBattleMessage = "";
+    private String lastEffectMessage = "";
+    private int charIndex = 0;
+    
     private Pokemon playerPokemon;
     private Pokemon enemyPokemon;
     private KeyHandler keyHandler;
@@ -152,7 +156,40 @@ public class BattleState extends GameState {
         
         if (shakeTimer > 0) shakeTimer--;
 
+        // --- FIX: KUNCI LAYAR DI AKHIR BATTLE, WAJIB TEKAN ENTER UNTUK KELUAR ---
+        if (phase == Phase.BATTLE_END && messageTimer == 0) {
+            if (keyHandler.actionPressed) {
+                keyHandler.actionPressed = false;
+                isExiting = true; // Jalankan animasi fade out untuk keluar ke Overworld
+            }
+            return; // Kunci kodingan di bawahnya biar ga jalan
+        }
+
+        // --- DETEKSI PERUBAHAN TEKS BUAT RESET MESIN TIK ---
+        if (!battleMessage.equals(lastBattleMessage) || !effectMessage.equals(lastEffectMessage)) {
+            lastBattleMessage = battleMessage;
+            lastEffectMessage = effectMessage;
+            charIndex = 0; // Mulai ngetik dari awal
+        }
+
+        // --- JALANKAN ANIMASI MESIN TIK (1 Huruf per Frame) ---
+        int totalLen = battleMessage.length() + effectMessage.length();
+        if (charIndex < totalLen) {
+            charIndex++; // Nambah 1 huruf terus
+        }
+
         if (messageTimer > 0) {
+            // --- FITUR SKIP PINTAR (MESIN TIK) ---
+            if (keyHandler.actionPressed) {
+                keyHandler.actionPressed = false;
+                
+                if (charIndex < totalLen) {
+                    charIndex = totalLen; // Kalau lagi ngetik dipencet -> Teks langsung Tampil Full!
+                } else {
+                    messageTimer = 1; // Kalau udah full dipencet -> Skip Timernya!
+                }
+            }
+
             messageTimer--;
             if (messageTimer == 0) processMessageEnd();
             return;
@@ -210,9 +247,10 @@ public class BattleState extends GameState {
             
             if (faintsInThisBattle >= 3) {
                 battleMessage = "3 of your Pokémon fainted! You blacked out...";
-                messageTimer = MESSAGE_DURATION;
+                effectMessage = ""; // Bersihkan sisa teks super effective musuh
+                messageTimer = 0;   // SET 0 BIAR WAJIB DI-ENTER PLAYER
                 phase = Phase.BATTLE_END; 
-                savePartyToDatabase(); // Wajib save HP pas mati!
+                savePartyToDatabase(); 
                 return;
             } else if (hasAlivePokemon) {
                 battleMessage = playerPokemon.getName() + " fainted! Choose another Pokémon!";
@@ -240,13 +278,30 @@ public class BattleState extends GameState {
     }
 
     private void handleMainMenu() {
-        if (keyHandler.upPressed && selectedOption >= 2) { selectedOption -= 2; keyHandler.upPressed = false; }
-        if (keyHandler.downPressed && selectedOption <= 1) { selectedOption += 2; keyHandler.downPressed = false; }
-        if (keyHandler.leftPressed && selectedOption % 2 != 0) { selectedOption -= 1; keyHandler.leftPressed = false; }
-        if (keyHandler.rightPressed && selectedOption % 2 == 0) { selectedOption += 1; keyHandler.rightPressed = false; }
+        if (keyHandler.upPressed && selectedOption >= 2) { 
+            selectedOption -= 2; 
+            keyHandler.upPressed = false; 
+            gamePanel.playSoundEffect("res/sound/select.wav");
+        }
+        if (keyHandler.downPressed && selectedOption <= 1) { 
+            selectedOption += 2; 
+            keyHandler.downPressed = false; 
+            gamePanel.playSoundEffect("res/sound/select.wav");
+        }
+        if (keyHandler.leftPressed && selectedOption % 2 != 0) { 
+            selectedOption -= 1; 
+            keyHandler.leftPressed = false; 
+            gamePanel.playSoundEffect("res/sound/select.wav");
+        }
+        if (keyHandler.rightPressed && selectedOption % 2 == 0) { 
+            selectedOption += 1; 
+            keyHandler.rightPressed = false; 
+            gamePanel.playSoundEffect("res/sound/select.wav");
+        }
 
         if (keyHandler.actionPressed) {
             keyHandler.actionPressed = false;
+            gamePanel.playSoundEffect("res/sound/select.wav"); // Suara pas nge-klik OK
             if (selectedOption == 0) changeSubState(SubState.MOVE_SELECTION);
             else if (selectedOption == 1) changeSubState(SubState.BAG);
             else if (selectedOption == 2) {
@@ -273,29 +328,34 @@ public class BattleState extends GameState {
             keyHandler.upPressed = false;
             if (selectedMove >= 2) {
                 selectedMove -= 2;
+                gamePanel.playSoundEffect("res/sound/select.wav");
             }
         }
         if (keyHandler.downPressed) {
             keyHandler.downPressed = false;
             if (selectedMove + 2 < moveCount) {
                 selectedMove += 2;
+                gamePanel.playSoundEffect("res/sound/select.wav");
             }
         }
         if (keyHandler.leftPressed) {
             keyHandler.leftPressed = false;
             if (selectedMove % 2 != 0) {
                 selectedMove -= 1;
+                gamePanel.playSoundEffect("res/sound/select.wav");
             }
         }
         if (keyHandler.rightPressed) {
             keyHandler.rightPressed = false;
             if (selectedMove % 2 == 0 && selectedMove + 1 < moveCount) {
                 selectedMove += 1;
+                gamePanel.playSoundEffect("res/sound/select.wav");
             }
         }
 
         if (keyHandler.actionPressed) {
             keyHandler.actionPressed = false;
+            gamePanel.playSoundEffect("res/sound/select.wav"); // Suara pas nge-klik OK
             playerChosenMove = playerPokemon.getMove(selectedMove);
 
             if (playerPokemon.getSpeed() >= enemyPokemon.getSpeed()) {
@@ -442,18 +502,24 @@ private void playerAttackAction() {
             return;
         }
 
-        // --- UBAH NAVIGASI JADI VERTIKAL (ATAS & BAWAH SAJA) ---
         if (keyHandler.upPressed) {
             keyHandler.upPressed = false;
-            if (selectedItem > 0) selectedItem--; 
+            if (selectedItem > 0) {
+                selectedItem--; 
+                gamePanel.playSoundEffect("res/sound/select.wav");
+            }
         }
         if (keyHandler.downPressed) {
             keyHandler.downPressed = false;
-            if (selectedItem < itemCount - 1) selectedItem++;
+            if (selectedItem < itemCount - 1) {
+                selectedItem++;
+                gamePanel.playSoundEffect("res/sound/select.wav");
+            }
         }
 
         if (keyHandler.actionPressed) {
             keyHandler.actionPressed = false;
+            gamePanel.playSoundEffect("res/sound/select.wav"); // Suara pas nge-klik OK
             applyItemEffect(inventory.get(selectedItem));
         }
         if (keyHandler.backPressed) {
@@ -465,7 +531,19 @@ private void playerAttackAction() {
     private void applyItemEffect(Item item) {
         if (item.getQuantity() <= 0) return;
 
-        item.use(); 
+        item.use(); // Ngurangin jumlah di RAM (memori sementara)
+        
+        // --- LAPORKAN KE DATABASE BIAR BENERAN BERKURANG! ---
+        SaveManager.consumeItem(item.getName());
+        
+        // --- BERSIHKAN DARI TAS KALAU ITEMNYA HABIS ---
+        if (item.getQuantity() <= 0) {
+            inventory.remove(item);
+            if (selectedItem > 0) {
+                selectedItem--; // Geser kursor biar game nggak crash
+            }
+        }
+
         subState = SubState.MESSAGE_ONLY;
         messageTimer = MESSAGE_DURATION;
         
@@ -476,10 +554,9 @@ private void playerAttackAction() {
             if (playerPokemon.getCurrentHp() > playerPokemon.getMaxHp()) 
                 playerPokemon.setCurrentHp(playerPokemon.getMaxHp());
             
-            // --- MODIFIKASI FIX: Bebas milih Move setelah pakai item ---
-            turnStep = 0; // Kembalikan ke fase persiapan player
-            justSwitched = false; // Pastikan flag switch mati
-            // Gantian musuh tidak dipicu dulu, player kembali ke menu utama/move
+            // Fix: Bebas milih Move setelah pakai item
+            turnStep = 0; 
+            justSwitched = false; 
         }
         // --- 2. LOGIKA ITEM PENANGKAP (BALL) ---
         else if (item.getName().toLowerCase().contains("ball")) {
@@ -499,10 +576,7 @@ private void playerAttackAction() {
                 else battleMessage = "The Ball broke due to a database error!";
                 phase = Phase.BATTLE_END; 
             } else {
-                // Kalo musuh lepas dari bola, player dikasih kesempatan milih move lagi buat nge-whittle HP-nya
                 battleMessage = "Oh no! The wild " + enemyPokemon.getName() + " broke free!";
-                
-                // --- MODIFIKASI FIX: Lepas ball bisa langsung move lagi ---
                 turnStep = 0;
                 justSwitched = false;
             }
@@ -512,7 +586,6 @@ private void playerAttackAction() {
             playerPokemon.setSpeed(playerPokemon.getSpeed() + item.getEffectValue());
             battleMessage = playerPokemon.getName() + "'s SPEED rose sharply!";
             
-            // --- MODIFIKASI FIX: Setelah nge-buff Speed, langsung gas pilih Move ---
             turnStep = 0;
             justSwitched = false;
         }
@@ -520,18 +593,43 @@ private void playerAttackAction() {
 
     private void handlePartyInput() {
         int partySize = playerParty.size();
+        int maxRows = 9; 
         
         if (keyHandler.upPressed) { 
-            if (selectedPartyIndex > 0) selectedPartyIndex--; 
             keyHandler.upPressed = false; 
+            if (selectedPartyIndex % maxRows != 0) {
+                selectedPartyIndex--; 
+                gamePanel.playSoundEffect("res/sound/select.wav");
+            }
         }
         if (keyHandler.downPressed) { 
-            if (selectedPartyIndex < partySize - 1) selectedPartyIndex++; 
             keyHandler.downPressed = false; 
+            if (selectedPartyIndex % maxRows != (maxRows - 1) && selectedPartyIndex + 1 < partySize) {
+                selectedPartyIndex++; 
+                gamePanel.playSoundEffect("res/sound/select.wav");
+            }
+        }
+        if (keyHandler.leftPressed) {
+            keyHandler.leftPressed = false;
+            if (selectedPartyIndex - maxRows >= 0) {
+                selectedPartyIndex -= maxRows;
+                gamePanel.playSoundEffect("res/sound/select.wav");
+            }
+        }
+        if (keyHandler.rightPressed) {
+            keyHandler.rightPressed = false;
+            if (selectedPartyIndex + maxRows < partySize) {
+                selectedPartyIndex += maxRows;
+                gamePanel.playSoundEffect("res/sound/select.wav");
+            } else if (selectedPartyIndex != partySize - 1) {
+                selectedPartyIndex = partySize - 1;
+                gamePanel.playSoundEffect("res/sound/select.wav");
+            }
         }
 
         if (keyHandler.actionPressed) {
             keyHandler.actionPressed = false;
+            gamePanel.playSoundEffect("res/sound/select.wav"); // Suara pas nge-klik OK
             Pokemon chosenPokemon = playerParty.get(selectedPartyIndex);
             
             if (chosenPokemon.isFainted()) {
@@ -580,7 +678,13 @@ private void playerAttackAction() {
         playerPokemon.gainExp(expGained); 
         int expNeeded = playerPokemon.getLevel() * 100;
         
+        // --- HITUNG DUIT & SIMPAN ---
+        int moneyGained = enemyPokemon.getLevel() * 100; 
+        SaveManager.playerMoney += moneyGained; 
+        
+        // ATAS: Teks EXP | BAWAH: Teks Duit (Menimpa tulisan effective lama!)
         battleMessage = enemyPokemon.getName() + " fainted! Gained " + expGained + " EXP.";
+        effectMessage = "Gained $" + moneyGained + "!";
         
         if (currentExp >= expNeeded) {
             int newLevel = playerPokemon.getLevel() + 1;
@@ -595,12 +699,13 @@ private void playerAttackAction() {
             playerPokemon.setCurrentHp(playerPokemon.getMaxHp()); 
             
             battleMessage = playerPokemon.getName() + " grew to Level " + newLevel + "!";
+            effectMessage = "Gained $" + moneyGained + " & HP Fully Restored!";
         }
         
-        messageTimer = MESSAGE_DURATION; 
+        messageTimer = 0; // SET 0 BIAR LANGSUNG NGUNCI, TIDAK JALAN OTOMATIS
         phase = Phase.BATTLE_END;
         
-        savePartyToDatabase(); // Panggil fungsi penyelamat
+        savePartyToDatabase(); 
     }
 
     private void flee() {
@@ -634,22 +739,56 @@ private void playerAttackAction() {
         
         renderSprites(g2d);
 
+        // --- DEKLARASI VARIABEL CUKUP 1 KALI DI SINI AJA ---
         int bottomY = GamePanel.SCREEN_HEIGHT - 130;
         int boxX = 20;
-        int boxW = (messageTimer <= 0) ? 400 : GamePanel.SCREEN_WIDTH - 40;
+        int boxW = GamePanel.SCREEN_WIDTH - 40; // Default full layar
 
-        g2d.setColor(new Color(30, 30, 30, 250));
-        g2d.fillRoundRect(boxX, bottomY, boxW, 110, 15, 15);
-        g2d.setColor(Color.WHITE);
-        g2d.setStroke(new java.awt.BasicStroke(3));
-        g2d.drawRoundRect(boxX, bottomY, boxW, 110, 15, 15);
-
+        // --- FIX KOTAK KEBELAH & EFEK MESIN TIK ---
         if (!battleMessage.isEmpty()) {
-            hud.renderDialogBox(g2d, battleMessage, effectMessage, pokemonFont);
+            
+            // --- LOGIKA POTONG TEKS (MESIN TIK) ---
+            String renderMsg1 = "";
+            String renderMsg2 = "";
+            int len1 = battleMessage.length();
+            
+            if (charIndex <= len1) {
+                renderMsg1 = battleMessage.substring(0, charIndex);
+            } else {
+                renderMsg1 = battleMessage;
+                int effectProgress = charIndex - len1;
+                renderMsg2 = effectMessage.substring(0, Math.min(effectMessage.length(), effectProgress));
+            }
+
+            // 1. Panggil HUD dengan teks yang udah dipotong-potong per frame
+            hud.renderDialogBox(g2d, renderMsg1, renderMsg2, pokemonFont);
+            
+            // Panah Kedip Putih
+            if (phase == Phase.BATTLE_END && messageTimer == 0) {
+                if (System.currentTimeMillis() % 1000 < 500) {
+                    g2d.setColor(Color.WHITE); 
+                    int arrowX = GamePanel.SCREEN_WIDTH - 60;
+                    int arrowY = GamePanel.SCREEN_HEIGHT - 45;
+                    int[] xPoints = {arrowX, arrowX + 16, arrowX + 8}; 
+                    int[] yPoints = {arrowY, arrowY, arrowY + 12};     
+                    g2d.fillPolygon(xPoints, yPoints, 3);
+                }
+            }
+            
         } else {
+            // 2. Kalau ngga ada pesan (lagi milih jurus), BattleState bikin kotak kecil buat HP Player!
+            boxW = 400; 
+            
+            g2d.setColor(new Color(30, 30, 30, 250));
+            g2d.fillRoundRect(boxX, bottomY, boxW, 110, 15, 15);
+            g2d.setColor(Color.WHITE);
+            g2d.setStroke(new java.awt.BasicStroke(3));
+            g2d.drawRoundRect(boxX, bottomY, boxW, 110, 15, 15);
+            
             renderStatusCard(g2d, boxX, bottomY, playerPokemon, false);
         }
 
+        // --- RENDER MENU ---
         if (messageTimer <= 0 && introCounter >= MAX_INTRO_TIME) {
             if (subState == SubState.MAIN_MENU) {
                 hud.renderBattleMenu(g2d, menuOptions, selectedOption, pokemonFont);
@@ -665,6 +804,7 @@ private void playerAttackAction() {
             }
         } 
         
+        // --- EFEK FADE OUT PAS KELUAR ---
         if (isExiting) {
             float finalAlpha = (float) exitCounter / MAX_EXIT_TIME;
             if (finalAlpha > 1f) finalAlpha = 1f; 

@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: May 26, 2026 at 08:53 PM
+-- Generation Time: May 27, 2026 at 08:44 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -102,7 +102,16 @@ INSERT INTO `moves_base` (`move_id`, `name`, `power`, `accuracy`, `max_pp`, `typ
 (33, 'Glaciate', 65, 95, 10, 'ICE', 'SPECIAL', 100),
 (34, 'Secret Sword', 85, 100, 10, 'FIGHTING', 'SPECIAL', 0),
 (35, 'Relic Song', 75, 100, 10, 'NORMAL', 'SPECIAL', 10),
-(36, 'Techno Blast', 120, 100, 5, 'NORMAL', 'SPECIAL', 0);
+(36, 'Techno Blast', 120, 100, 5, 'NORMAL', 'SPECIAL', 0),
+(37, 'Close Combat', 120, 100, 5, 'FIGHTING', 'PHYSICAL', 0),
+(38, 'Aura Sphere', 80, 100, 20, 'FIGHTING', 'SPECIAL', 0),
+(39, 'Brave Bird', 120, 100, 15, 'FLYING', 'PHYSICAL', 0),
+(40, 'Earth Power', 90, 100, 10, 'GROUND', 'SPECIAL', 0),
+(41, 'Roar of Time', 150, 90, 5, 'DRAGON', 'SPECIAL', 0),
+(42, 'Spacial Rend', 100, 95, 5, 'DRAGON', 'SPECIAL', 0),
+(43, 'Shadow Force', 120, 100, 5, 'GHOST', 'PHYSICAL', 0),
+(44, 'Judgment', 100, 100, 10, 'NORMAL', 'SPECIAL', 0),
+(45, 'Wood Hammer', 120, 100, 15, 'GRASS', 'PHYSICAL', 0);
 
 -- --------------------------------------------------------
 
@@ -122,9 +131,9 @@ CREATE TABLE `player_inventory` (
 
 INSERT INTO `player_inventory` (`player_id`, `item_id`, `quantity`) VALUES
 (1, 1, 10),
-(1, 2, 5),
+(1, 2, 6),
 (1, 3, 2),
-(1, 4, 20),
+(1, 4, 24),
 (1, 5, 8),
 (1, 6, 3),
 (1, 7, 5);
@@ -158,17 +167,22 @@ CREATE TABLE `player_pokemon` (
 
 INSERT INTO `player_pokemon` (`instance_id`, `player_id`, `poke_id`, `level`, `current_hp`, `exp`, `move1_id`, `move1_pp`, `move2_id`, `move2_pp`, `move3_id`, `move3_pp`, `move4_id`, `move4_pp`) VALUES
 (1, 1, 498, 5, 85, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(2, 1, 495, 6, 48, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(3, 1, 501, 5, 39, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(2, 1, 495, 6, 67, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(3, 1, 501, 6, 77, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
 (4, 1, 620, 5, 85, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(5, 1, 612, 8, 105, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(6, 1, 543, 3, 0, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(7, 1, 617, 5, 82, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(8, 1, 640, 4, 100, 60, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(9, 1, 639, 5, 106, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(10, 1, 643, 12, 137, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(11, 1, 635, 4, 97, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(12, 1, 637, 5, 105, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+(5, 1, 612, 9, 104, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(6, 1, 543, 3, 46, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(7, 1, 617, 5, 100, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(8, 1, 640, 5, 111, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(9, 1, 639, 5, 111, 60, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(10, 1, 643, 26, 162, 40, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(11, 1, 635, 4, 110, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(12, 1, 637, 5, 105, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(13, 1, 644, 5, 120, 40, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(14, 1, 645, 5, 109, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(15, 1, 537, 4, 123, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(16, 1, 571, 4, 78, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(17, 1, 638, 3, 107, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -190,7 +204,7 @@ CREATE TABLE `player_save` (
 --
 
 INSERT INTO `player_save` (`id`, `player_name`, `world_x`, `world_y`, `money`, `last_saved`) VALUES
-(1, 'Ash', 3200, 3200, 1000, '2026-05-14 14:31:32');
+(1, 'Ash', 4082, 3957, 6400, '2026-05-27 18:44:24');
 
 -- --------------------------------------------------------
 
@@ -216,6 +230,31 @@ CREATE TABLE `pokemon_base` (
 --
 
 INSERT INTO `pokemon_base` (`poke_id`, `name`, `type1`, `type2`, `base_hp`, `base_atk`, `base_def`, `base_sp_atk`, `base_sp_def`, `base_spd`) VALUES
+(387, 'Turtwig', 'GRASS', NULL, 55, 68, 64, 45, 55, 31),
+(388, 'Grotle', 'GRASS', NULL, 75, 89, 85, 55, 65, 36),
+(389, 'Torterra', 'GRASS', 'GROUND', 95, 109, 105, 75, 85, 56),
+(390, 'Chimchar', 'FIRE', NULL, 44, 58, 44, 58, 44, 61),
+(391, 'Monferno', 'FIRE', 'FIGHTING', 64, 78, 52, 78, 52, 81),
+(392, 'Infernape', 'FIRE', 'FIGHTING', 76, 104, 71, 104, 71, 108),
+(393, 'Piplup', 'WATER', NULL, 53, 51, 53, 61, 56, 40),
+(394, 'Prinplup', 'WATER', NULL, 64, 66, 68, 81, 76, 50),
+(395, 'Empoleon', 'WATER', 'STEEL', 84, 86, 88, 111, 101, 60),
+(396, 'Starly', 'NORMAL', 'FLYING', 40, 55, 30, 30, 30, 60),
+(397, 'Staravia', 'NORMAL', 'FLYING', 55, 75, 50, 40, 40, 80),
+(398, 'Staraptor', 'NORMAL', 'FLYING', 85, 120, 70, 50, 60, 100),
+(403, 'Shinx', 'ELECTRIC', NULL, 45, 65, 34, 40, 34, 45),
+(404, 'Luxio', 'ELECTRIC', NULL, 60, 85, 49, 60, 49, 60),
+(405, 'Luxray', 'ELECTRIC', NULL, 80, 120, 79, 95, 79, 70),
+(443, 'Gible', 'DRAGON', 'GROUND', 58, 70, 45, 40, 45, 42),
+(444, 'Gabite', 'DRAGON', 'GROUND', 68, 90, 65, 50, 55, 82),
+(445, 'Garchomp', 'DRAGON', 'GROUND', 108, 130, 95, 80, 85, 102),
+(447, 'Riolu', 'FIGHTING', NULL, 40, 70, 40, 35, 40, 60),
+(448, 'Lucario', 'FIGHTING', 'STEEL', 70, 110, 70, 115, 70, 90),
+(468, 'Togekiss', 'FAIRY', 'FLYING', 85, 50, 95, 120, 115, 80),
+(483, 'Dialga', 'STEEL', 'DRAGON', 100, 120, 120, 150, 100, 90),
+(484, 'Palkia', 'WATER', 'DRAGON', 90, 120, 100, 150, 120, 100),
+(487, 'Giratina', 'GHOST', 'DRAGON', 150, 100, 120, 100, 120, 90),
+(493, 'Arceus', 'NORMAL', NULL, 120, 120, 120, 120, 120, 120),
 (494, 'Victini', 'Psychic', 'Fire', 100, 100, 100, 100, 100, 100),
 (495, 'Snivy', 'Grass', NULL, 45, 45, 55, 45, 55, 63),
 (496, 'Servine', 'Grass', NULL, 60, 60, 75, 60, 75, 83),
@@ -639,7 +678,43 @@ INSERT INTO `pokemon_moves` (`poke_id`, `move_id`, `level_learned`) VALUES
 (648, 1, NULL),
 (648, 35, NULL),
 (649, 1, NULL),
-(649, 36, NULL);
+(649, 36, NULL),
+(389, 45, NULL),
+(389, 10, NULL),
+(389, 1, NULL),
+(392, 37, NULL),
+(392, 7, NULL),
+(392, 19, NULL),
+(395, 9, NULL),
+(395, 22, NULL),
+(395, 11, NULL),
+(398, 39, NULL),
+(398, 37, NULL),
+(398, 18, NULL),
+(405, 31, NULL),
+(405, 23, NULL),
+(405, 1, NULL),
+(445, 14, NULL),
+(445, 10, NULL),
+(445, 19, NULL),
+(448, 38, NULL),
+(448, 37, NULL),
+(448, 22, NULL),
+(468, 24, NULL),
+(468, 12, NULL),
+(468, 8, NULL),
+(483, 41, NULL),
+(483, 27, NULL),
+(483, 14, NULL),
+(484, 42, NULL),
+(484, 9, NULL),
+(484, 14, NULL),
+(487, 43, NULL),
+(487, 15, NULL),
+(487, 14, NULL),
+(493, 44, NULL),
+(493, 16, NULL),
+(493, 12, NULL);
 
 --
 -- Indexes for dumped tables
@@ -704,13 +779,13 @@ ALTER TABLE `items`
 -- AUTO_INCREMENT for table `moves_base`
 --
 ALTER TABLE `moves_base`
-  MODIFY `move_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=37;
+  MODIFY `move_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=46;
 
 --
 -- AUTO_INCREMENT for table `player_pokemon`
 --
 ALTER TABLE `player_pokemon`
-  MODIFY `instance_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
+  MODIFY `instance_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
 
 --
 -- AUTO_INCREMENT for table `player_save`

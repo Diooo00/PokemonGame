@@ -16,7 +16,8 @@ import java.awt.RenderingHints;
  * @author thety
  */
 public class DialogBox {
-        private static final int BOX_X      = 20;
+    private java.awt.Font pokemonFont;
+    private static final int BOX_X      = 20;
     private static final int BOX_HEIGHT = 100;
     private int boxY;
     private int boxWidth;
@@ -31,6 +32,13 @@ public class DialogBox {
     private boolean finished = false;
 
     public DialogBox(GamePanel gamePanel) {
+        try {
+            java.io.File fontFile = new java.io.File("res/font/PKMN RBYGSC.ttf"); 
+            this.pokemonFont = java.awt.Font.createFont(java.awt.Font.TRUETYPE_FONT, fontFile).deriveFont(20f);
+        } catch (Exception e) {
+            this.pokemonFont = new java.awt.Font("Monospaced", java.awt.Font.BOLD, 20);
+        }
+        
         boxWidth = GamePanel.SCREEN_WIDTH - 40;
         boxY     = GamePanel.SCREEN_HEIGHT - BOX_HEIGHT - 20;
     }
@@ -78,15 +86,26 @@ public class DialogBox {
         // Teks
         g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING,
                              RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-        g2d.setFont(new Font("Arial", Font.PLAIN, 14));
+        g2d.setFont(pokemonFont);
         g2d.setColor(Color.WHITE);
         g2d.drawString(displayText, BOX_X + 16, boxY + 36);
 
         // Indikator "tekan Z untuk lanjut" saat teks selesai
-        if (finished) {
-            g2d.setFont(new Font("Arial", Font.BOLD, 11));
-            g2d.setColor(new Color(200, 200, 200));
-            g2d.drawString("▼ Z / Enter", BOX_X + boxWidth - 90, boxY + BOX_HEIGHT - 12);
+        if (isFinished()) {
+            // Efek kedip: Tampil 500ms, Hilang 500ms
+            if (System.currentTimeMillis() % 1000 < 500) {
+                g2d.setColor(java.awt.Color.WHITE);
+                
+                // Posisikan di pojok kanan bawah layar
+                int arrowX = GamePanel.SCREEN_WIDTH - 60;
+                int arrowY = GamePanel.SCREEN_HEIGHT - 45;
+                
+                // Gambar Segitiga Hadap Bawah
+                int[] xPoints = {arrowX, arrowX + 16, arrowX + 8}; 
+                int[] yPoints = {arrowY, arrowY, arrowY + 12};     
+                
+                g2d.fillPolygon(xPoints, yPoints, 3);
+            }
         }
     }
 }

@@ -11,9 +11,11 @@ import com.pokemongame.state.OverworldState;
 import com.pokemongame.util.SpriteLoader;
 import com.pokemongame.util.DatabaseManager;
 import com.pokemongame.util.CollisionChecker;
+import com.pokemongame.util.SaveManager;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.sql.*;
+
 /**
  *
  * @author thety
@@ -21,16 +23,18 @@ import java.sql.*;
 public class Player extends Entity {
     
     KeyHandler keyHandler;
-    BufferedImage[][] playerSprites;
     CollisionChecker cChecker;
     
-    private final int ROWS = 4; // Baris arah
-    private final int COLS = 3; // Kolom animasi
+    // --- VARIABEL ANIMASI BARU ---
     private int spriteCounter = 0;
-    private int spriteCol = 0; 
-    private int spriteRow = 0; 
+    private int spriteNum = 1; // 1 = Idle, 2 = Walk 1, 3 = Walk 2
+    private int walkSequence = 0; // Buat ngatur urutan (Kaki 1 -> Idle -> Kaki 2 -> Idle)
 
-    public BufferedImage up1, down1, left1, right1;
+    // Wadah khusus untuk masing-masing potongan gambar
+    public BufferedImage up1, up2, up3;
+    public BufferedImage down1, down2, down3;
+    public BufferedImage left1, left2, left3;
+    public BufferedImage right1, right2, right3;
     
     public Player(GamePanel gp, KeyHandler keyHandler) {
         super(gp);
@@ -40,96 +44,144 @@ public class Player extends Entity {
         this.worldX = GamePanel.TILE_SIZE * 61; 
         this.worldY = GamePanel.TILE_SIZE * 62;
         this.speed = 7;
+        this.direction = "DOWN"; // Set arah default biar nggak error pas pertama spawn
         
         setupPlayerSprites();
-//        loadPosition();
         
         this.hitbox = new java.awt.Rectangle(8, 16, 32, 32);
-        
         this.hitboxDefaultX = this.hitbox.x;
         this.hitboxDefaultY = this.hitbox.y;
+        SaveManager.loadGame(this);
     }
 
     private void setupPlayerSprites() {
-        BufferedImage fullSheet = SpriteLoader.loadSprite("/sprites/player.png");
-        if (fullSheet == null) return;
-        playerSprites = new BufferedImage[ROWS][COLS];
-        int sW = fullSheet.getWidth() / COLS;
-        int sH = fullSheet.getHeight() / ROWS;
-
-        for (int r = 0; r < ROWS; r++) {
-            for (int c = 0; c < COLS; c++) {
-                playerSprites[r][c] = fullSheet.getSubimage(c * sW, r * sH, sW, sH);
-            }
+        // PERHATIAN: Pastikan path ini sesuai sama letak gambar player barumu!
+        BufferedImage fullSheet = SpriteLoader.loadSprite("/sprites/player.png"); 
+        if (fullSheet == null) {
+            System.out.println("ERROR: player.png gagal dimuat!");
+            return;
         }
+
+        // Karena layout 3x4
+        int sW = fullSheet.getWidth() / 3;
+        int sH = fullSheet.getHeight() / 4;
+
+        // --- POTONG MANUAL SESUAI POSISI DARI KAMU ---
+        
+        // ARAH ATAS
+        up1 = fullSheet.getSubimage(0 * sW, 0 * sH, sW, sH); // Idle Atas (Row 1, Col 1)
+        up2 = fullSheet.getSubimage(2 * sW, 0 * sH, sW, sH); // Jalan Atas 1 (Row 1, Col 3)
+        up3 = fullSheet.getSubimage(1 * sW, 3 * sH, sW, sH); // Jalan Atas 2 (Row 4, Col 2)
+
+        // ARAH KANAN
+        right1 = fullSheet.getSubimage(1 * sW, 0 * sH, sW, sH); // Idle Kanan (Row 1, Col 2)
+        right2 = fullSheet.getSubimage(1 * sW, 1 * sH, sW, sH); // Jalan Kanan 1 (Row 2, Col 2)
+        right3 = fullSheet.getSubimage(1 * sW, 2 * sH, sW, sH); // Jalan Kanan 2 (Row 3, Col 2)
+
+        // ARAH KIRI
+        left1 = fullSheet.getSubimage(0 * sW, 2 * sH, sW, sH); // Idle Kiri (Row 3, Col 1)
+        left2 = fullSheet.getSubimage(0 * sW, 1 * sH, sW, sH); // Jalan Kiri 1 (Row 2, Col 1)
+        left3 = fullSheet.getSubimage(0 * sW, 3 * sH, sW, sH); // Jalan Kiri 2 (Row 4, Col 1)
+
+        // ARAH BAWAH
+        down1 = fullSheet.getSubimage(2 * sW, 1 * sH, sW, sH); // Idle Bawah (Row 2, Col 3)
+        down2 = fullSheet.getSubimage(2 * sW, 2 * sH, sW, sH); // Jalan Bawah 1 (Row 3, Col 3)
+        down3 = fullSheet.getSubimage(2 * sW, 3 * sH, sW, sH); // Jalan Bawah 2 (Row 4, Col 3)
     }
 
     @Override
-public void update() {
-    // Cek apakah ada tombol arah yang sedang ditekan
-    if (keyHandler.upPressed || keyHandler.downPressed || keyHandler.leftPressed || keyHandler.rightPressed) {
-        
-        // 1. Tentukan Arah dan Ganti Baris Sprite (spriteRow)
-        if (keyHandler.upPressed) {
-            direction = "UP";
-            spriteRow = 1; // Baris ke-2 di player.png (Atas)
-        } else if (keyHandler.downPressed) {
-            direction = "DOWN";
-            spriteRow = 0; // Baris ke-1 di player.png (Bawah)
-        } else if (keyHandler.leftPressed) {
-            direction = "LEFT";
-            spriteRow = 2; // Baris ke-3 di player.png (Kiri)
-        } else if (keyHandler.rightPressed) {
-            direction = "RIGHT";
-            spriteRow = 3; // Baris ke-4 di player.png (Kanan)
-        }
+    public void update() {
+        if (keyHandler.upPressed || keyHandler.downPressed || keyHandler.leftPressed || keyHandler.rightPressed) {
+            
+            // 1. Tentukan Arah
+            if (keyHandler.upPressed) { direction = "UP"; }
+            else if (keyHandler.downPressed) { direction = "DOWN"; }
+            else if (keyHandler.leftPressed) { direction = "LEFT"; }
+            else if (keyHandler.rightPressed) { direction = "RIGHT"; }
 
-        // 2. Logika Collision
-        collisionOn = false;
-        gamePanel.cChecker.checkTile(this);
+            // 2. Logika Collision
+            collisionOn = false;
+            gamePanel.cChecker.checkTile(this);
 
-        // 3. Logika Pergerakan
-        if (!collisionOn) {
-            switch (direction) {
-                case "UP":    worldY -= speed; break;
-                case "DOWN":  worldY += speed; break;
-                case "LEFT":  worldX -= speed; break;
-                case "RIGHT": worldX += speed; break;
+            // 3. Logika Pergerakan
+            if (!collisionOn) {
+                switch (direction) {
+                    case "UP":    worldY -= speed; break;
+                    case "DOWN":  worldY += speed; break;
+                    case "LEFT":  worldX -= speed; break;
+                    case "RIGHT": worldX += speed; break;
+                }
             }
-        }
 
-        // 4. Logika Jalannya Animasi (Ganti Kolom/spriteCol)
-        spriteCounter++;
-        if (spriteCounter > 12) { // Kecepatan ganti frame
-            spriteCol++;
-            if (spriteCol >= COLS) { 
-                spriteCol = 0; // Reset ke frame pertama jika sudah mentok
+            // 4. Logika Ganti Gambar Animasi (Jalan ala Pokemon)
+            spriteCounter++;
+            if (spriteCounter > 12) { // 12 adalah kecepatan animasi kaki, bisa dikecilin biar makin cepet
+                walkSequence++;
+                if (walkSequence > 3) {
+                    walkSequence = 0; // Reset siklus
+                }
+
+                // Pola: Idle -> Kaki 1 -> Idle -> Kaki 2
+                if (walkSequence == 0 || walkSequence == 2) {
+                    spriteNum = 1; // Posenya Idle
+                } else if (walkSequence == 1) {
+                    spriteNum = 2; // Angkat kaki pertama
+                } else if (walkSequence == 3) {
+                    spriteNum = 3; // Angkat kaki sebelahnya
+                }
+                spriteCounter = 0;
             }
-            spriteCounter = 0;
+        } else {
+            // JIKA TOMBOL DILEPAS: Langsung setel jadi berdiri tegak (Idle)
+            spriteNum = 1; 
+            walkSequence = 0;
         }
-    } else {
-        // OPSIONAL: Jika tidak gerak, kembalikan ke frame berdiri diam (kolom tengah)
-        spriteCol = 1; 
     }
-}
 
     public void render(Graphics2D g2d) {
-        // Menghitung posisi render di layar relatif terhadap kamera
         int screenX = worldX - gamePanel.getCamera().x;
         int screenY = worldY - gamePanel.getCamera().y;
 
-        // Ambil gambar sprite sesuai arah (sesuaikan variabel dengan kodemu)
-        BufferedImage image = null; // Default ke arah bawah jika animasi belum jalan
+        BufferedImage image = null;
 
-        if (playerSprites != null) {
-            image = playerSprites[spriteRow][spriteCol]; 
+        // Pilih gambar berdasarkan Arah dan Pose (Idle / Kaki 1 / Kaki 2)
+        switch (direction) {
+            case "UP":
+                if (spriteNum == 1) image = up1;
+                else if (spriteNum == 2) image = up2;
+                else if (spriteNum == 3) image = up3;
+                break;
+            case "DOWN":
+                if (spriteNum == 1) image = down1;
+                else if (spriteNum == 2) image = down2;
+                else if (spriteNum == 3) image = down3;
+                break;
+            case "LEFT":
+                if (spriteNum == 1) image = left1;
+                else if (spriteNum == 2) image = left2;
+                else if (spriteNum == 3) image = left3;
+                break;
+            case "RIGHT":
+                if (spriteNum == 1) image = right1;
+                else if (spriteNum == 2) image = right2;
+                else if (spriteNum == 3) image = right3;
+                break;
         }
         
         if (image != null) {
-            // Jika sprite ketemu, gambar karakternya
-            g2d.drawImage(image, screenX, screenY, gamePanel.TILE_SIZE, gamePanel.TILE_SIZE, null);
+            // --- JURUS MEMBESARKAN KARAKTER ---
+            // Atur seberapa besar karakternya di sini (Misal: 1.5x lipat)
+            double scaleModifier = 1.5; 
+            int drawSize = (int) (gamePanel.TILE_SIZE * scaleModifier);
+            
+            // Biar posisinya tetep di tengah kotak dan kakinya napak:
+            // Geser X ke kiri setengah dari kelebihan lebarnya
+            int drawX = screenX - ((drawSize - gamePanel.TILE_SIZE) / 2);
+            // Geser Y full ke atas biar yang membesar kepalanya, bukan kakinya nembus tanah
+            int drawY = screenY - (drawSize - gamePanel.TILE_SIZE);
+
+            g2d.drawImage(image, drawX, drawY, drawSize, drawSize, null);
         } else {
-            // JIKA SPRITE GAGAL DIMUAT, TAMPILKAN KOTAK MERAH (Untuk Debugging)
             g2d.setColor(java.awt.Color.RED);
             g2d.fillRect(screenX, screenY, gamePanel.TILE_SIZE, gamePanel.TILE_SIZE);
         }   
@@ -146,7 +198,6 @@ public void update() {
                 this.worldY = rs.getInt("world_y");
             }
         } catch (SQLException e) { 
-            // Jika DB mati, gunakan posisi default agar tidak bug
             this.worldX = GamePanel.TILE_SIZE * 50;
             this.worldY = GamePanel.TILE_SIZE * 50;
         }
