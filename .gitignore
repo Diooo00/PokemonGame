@@ -1,0 +1,14 @@
+# Folder hasil build (ini yang bikin file gede)
+dist/
+build/
+nbproject/private/
+
+# Folder setting IDE
+.nb-gradle/
+.settings/
+.classpath
+.project
+
+# Folder sampah sistem (biar gak ikut ke-upload)
+.DS_Store
+Thumbs.db
