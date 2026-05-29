@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: May 27, 2026 at 08:44 PM
+-- Generation Time: May 29, 2026 at 12:44 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -130,12 +130,11 @@ CREATE TABLE `player_inventory` (
 --
 
 INSERT INTO `player_inventory` (`player_id`, `item_id`, `quantity`) VALUES
-(1, 1, 10),
+(1, 1, 9),
 (1, 2, 6),
 (1, 3, 2),
-(1, 4, 24),
-(1, 5, 8),
-(1, 6, 3),
+(1, 4, 10),
+(1, 5, 5),
 (1, 7, 5);
 
 -- --------------------------------------------------------
@@ -173,16 +172,21 @@ INSERT INTO `player_pokemon` (`instance_id`, `player_id`, `poke_id`, `level`, `c
 (5, 1, 612, 9, 104, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
 (6, 1, 543, 3, 46, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
 (7, 1, 617, 5, 100, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(8, 1, 640, 5, 111, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(8, 1, 640, 7, 115, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
 (9, 1, 639, 5, 111, 60, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(10, 1, 643, 26, 162, 40, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(10, 1, 643, 34, 178, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
 (11, 1, 635, 4, 110, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
 (12, 1, 637, 5, 105, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(13, 1, 644, 5, 120, 40, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(13, 1, 644, 6, 122, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
 (14, 1, 645, 5, 109, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(15, 1, 537, 4, 123, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(16, 1, 571, 4, 78, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(17, 1, 638, 3, 107, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+(15, 1, 537, 4, 123, 60, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(16, 1, 571, 2, 74, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(17, 1, 638, 3, 107, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(18, 1, 571, 2, 74, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(19, 1, 646, 2, 139, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(21, 1, 598, 4, 92, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(22, 1, 621, 2, 91, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(23, 1, 493, 3, 136, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -204,7 +208,7 @@ CREATE TABLE `player_save` (
 --
 
 INSERT INTO `player_save` (`id`, `player_name`, `world_x`, `world_y`, `money`, `last_saved`) VALUES
-(1, 'Ash', 4082, 3957, 6400, '2026-05-27 18:44:24');
+(1, 'Ash', 2066, 3215, 9200, '2026-05-29 10:44:01');
 
 -- --------------------------------------------------------
 
@@ -785,7 +789,7 @@ ALTER TABLE `moves_base`
 -- AUTO_INCREMENT for table `player_pokemon`
 --
 ALTER TABLE `player_pokemon`
-  MODIFY `instance_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
+  MODIFY `instance_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
 
 --
 -- AUTO_INCREMENT for table `player_save`

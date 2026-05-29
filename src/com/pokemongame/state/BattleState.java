@@ -31,8 +31,18 @@ import java.io.File;
  */
 public class BattleState extends GameState {
     private Font pokemonFont;
-    private enum SubState { MAIN_MENU, MOVE_SELECTION, BAG, POKEMON, MESSAGE_ONLY }
+    private enum SubState { MAIN_MENU, MOVE_SELECTION, BAG, POKEMON, MESSAGE_ONLY, CATCH_ANIMATION }
     private SubState subState = SubState.MESSAGE_ONLY;
+    
+    private int catchPhase = 0; 
+    private int catchTimer = 0;
+    private int ballX, ballY;
+    private int ballStartX, ballStartY;
+    private int ballTargetX, ballTargetY;
+    private boolean catchSuccess = false;
+    
+    private java.awt.image.BufferedImage pokeballImg, greatballImg, ultraballImg, currentBallImg;
+    private double ballAngle = 0;
 
     public enum Phase { PLAYER_TURN, ENEMY_TURN, BATTLE_END }
     private Phase phase = Phase.PLAYER_TURN;
@@ -89,6 +99,9 @@ public class BattleState extends GameState {
         this.previousState = previousState;
         this.keyHandler = gp.getKeyHandler();
         this.hud = new HUD();
+        this.pokeballImg = SpriteLoader.loadSprite("/sprites/pokeball.png");
+        this.greatballImg = SpriteLoader.loadSprite("/sprites/greatball.png");
+        this.ultraballImg = SpriteLoader.loadSprite("/sprites/ultraball.png");
         gp.playMusic("res/sound/battle.wav");
 
         this.inventory = SaveManager.loadPlayerItems();
@@ -99,8 +112,6 @@ public class BattleState extends GameState {
         }
 
         // --- FIX BUG KAGEBUNSHIN / IMMORTAL ---
-        // Kita tidak memakai 'playerP' bawaan. Kita paksa ambil Pokemon dari dalam 'playerParty'
-        // supaya HP yang berkurang di pertarungan adalah HP yang sama persis dengan yang di-save ke Database!
         this.playerPokemon = null;
         for (Pokemon p : this.playerParty) {
             if (p.getCurrentHp() > 0) {
@@ -108,12 +119,9 @@ public class BattleState extends GameState {
                 break;
             }
         }
-        // Kalau apes mati semua (harusnya ditolak dari Overworld), paksa ambil yang pertama
         if (this.playerPokemon == null) {
             this.playerPokemon = this.playerParty.get(0);
         }
-        
-        // (Baris kode auto-heal yang bikin immortal sebelumnya SUDAH SAYA HANGUSKAN DARI SINI)
 
         try {
             File fontFile = new File("res/font/PKMN RBYGSC.ttf"); 
@@ -131,7 +139,6 @@ public class BattleState extends GameState {
         this.introCounter = 0; 
     }
 
-    // --- METHOD BARU: PENYELAMAT DATA HP KE DATABASE ---
     private void savePartyToDatabase() {
         for(Pokemon p : playerParty) {
             SaveManager.savePokemonStatus(p);
@@ -156,43 +163,53 @@ public class BattleState extends GameState {
         
         if (shakeTimer > 0) shakeTimer--;
 
-        // --- FIX: KUNCI LAYAR DI AKHIR BATTLE, WAJIB TEKAN ENTER UNTUK KELUAR ---
+        // --- FIX: KUNCI LAYAR DI AKHIR BATTLE ---
         if (phase == Phase.BATTLE_END && messageTimer == 0) {
             if (keyHandler.actionPressed) {
                 keyHandler.actionPressed = false;
-                isExiting = true; // Jalankan animasi fade out untuk keluar ke Overworld
+                isExiting = true; 
             }
-            return; // Kunci kodingan di bawahnya biar ga jalan
+            return; 
         }
 
-        // --- DETEKSI PERUBAHAN TEKS BUAT RESET MESIN TIK ---
         if (!battleMessage.equals(lastBattleMessage) || !effectMessage.equals(lastEffectMessage)) {
             lastBattleMessage = battleMessage;
             lastEffectMessage = effectMessage;
-            charIndex = 0; // Mulai ngetik dari awal
+            charIndex = 0; 
         }
 
-        // --- JALANKAN ANIMASI MESIN TIK (1 Huruf per Frame) ---
         int totalLen = battleMessage.length() + effectMessage.length();
         if (charIndex < totalLen) {
-            charIndex++; // Nambah 1 huruf terus
+            charIndex++; 
         }
 
         if (messageTimer > 0) {
-            // --- FITUR SKIP PINTAR (MESIN TIK) ---
             if (keyHandler.actionPressed) {
                 keyHandler.actionPressed = false;
                 
                 if (charIndex < totalLen) {
-                    charIndex = totalLen; // Kalau lagi ngetik dipencet -> Teks langsung Tampil Full!
+                    charIndex = totalLen; 
                 } else {
-                    messageTimer = 1; // Kalau udah full dipencet -> Skip Timernya!
+                    messageTimer = 1; 
                 }
             }
 
             messageTimer--;
             if (messageTimer == 0) processMessageEnd();
             return;
+        } 
+        // --- FITUR BARU: NUNGGU ENTER MANUAL BUAT HASIL TANGKAPAN (-1) ---
+        else if (messageTimer == -1) {
+            if (keyHandler.actionPressed) {
+                keyHandler.actionPressed = false;
+                if (charIndex < totalLen) {
+                    charIndex = totalLen; 
+                } else {
+                    messageTimer = 0; 
+                    processMessageEnd(); 
+                }
+            }
+            return; 
         }
 
         if (turnStep == 0 && phase != Phase.BATTLE_END) {
@@ -201,12 +218,17 @@ public class BattleState extends GameState {
                 case MOVE_SELECTION: handleMoveSelection(); break;
                 case BAG: handleBagInput(); break;
                 case POKEMON: handlePartyInput(); break;
+                case CATCH_ANIMATION: handleCatchAnimation(); break;
             }
         }
     }
 
     private void processMessageEnd() {
         battleMessage = ""; 
+
+        if (subState == SubState.CATCH_ANIMATION) {
+            return; 
+        }
 
         if (phase == Phase.BATTLE_END) {
             isExiting = true;
@@ -232,7 +254,6 @@ public class BattleState extends GameState {
             return;
         } 
         
-        // --- SOLUSI BATAS 3 KEMATIAN ---
         if (playerPokemon.isFainted() && !isFaintHandled) {
             isFaintHandled = true; 
             faintsInThisBattle++;
@@ -247,8 +268,8 @@ public class BattleState extends GameState {
             
             if (faintsInThisBattle >= 3) {
                 battleMessage = "3 of your Pokémon fainted! You blacked out...";
-                effectMessage = ""; // Bersihkan sisa teks super effective musuh
-                messageTimer = 0;   // SET 0 BIAR WAJIB DI-ENTER PLAYER
+                effectMessage = ""; 
+                messageTimer = 0;   
                 phase = Phase.BATTLE_END; 
                 savePartyToDatabase(); 
                 return;
@@ -259,9 +280,9 @@ public class BattleState extends GameState {
                 return;
             } else {
                 battleMessage = playerPokemon.getName() + " fainted! You blacked out...";
-                messageTimer = MESSAGE_DURATION;
+                messageTimer = 90; 
                 phase = Phase.BATTLE_END; 
-                savePartyToDatabase(); // Wajib save HP pas mati!
+                savePartyToDatabase(); 
                 return;
             }
         }
@@ -270,9 +291,14 @@ public class BattleState extends GameState {
             turnStep = 2; 
             executeNextAttack();
         } else {
+            
+            // --- FIX ANTI JEBOL: Hanya reset gembok kalau player beneran habis nyerang! ---
+            if (playerChosenMove != null) {
+                blockSwitching = false; 
+            }
+            
             turnStep = 0;
             playerChosenMove = null;
-            blockSwitching = false; 
             changeSubState(SubState.MAIN_MENU);
         }
     }
@@ -301,7 +327,7 @@ public class BattleState extends GameState {
 
         if (keyHandler.actionPressed) {
             keyHandler.actionPressed = false;
-            gamePanel.playSoundEffect("res/sound/select.wav"); // Suara pas nge-klik OK
+            gamePanel.playSoundEffect("res/sound/select.wav"); 
             if (selectedOption == 0) changeSubState(SubState.MOVE_SELECTION);
             else if (selectedOption == 1) changeSubState(SubState.BAG);
             else if (selectedOption == 2) {
@@ -355,7 +381,7 @@ public class BattleState extends GameState {
 
         if (keyHandler.actionPressed) {
             keyHandler.actionPressed = false;
-            gamePanel.playSoundEffect("res/sound/select.wav"); // Suara pas nge-klik OK
+            gamePanel.playSoundEffect("res/sound/select.wav"); 
             playerChosenMove = playerPokemon.getMove(selectedMove);
 
             if (playerPokemon.getSpeed() >= enemyPokemon.getSpeed()) {
@@ -386,10 +412,9 @@ public class BattleState extends GameState {
         }
     }
 
-private void playerAttackAction() {
+    private void playerAttackAction() {
         subState = SubState.MESSAGE_ONLY;
 
-        // 1. TENTUKAN STAT PHYSICAL ATAU SPECIAL
         int atkStat = 0;
         int defStat = 0;
         
@@ -401,7 +426,6 @@ private void playerAttackAction() {
             defStat = enemyPokemon.getSpDef();
         }
 
-        // 2. SISTEM ABILITY AKTIF (Darah Merah = Damage Elemen Naik 1.5x)
         double abilityMod = 1.0;
         if (playerPokemon.getCurrentHp() <= playerPokemon.getMaxHp() / 3) {
             String pType = playerPokemon.getType1();
@@ -411,23 +435,19 @@ private void playerAttackAction() {
             else if (pType.equals("GRASS") && mType.equals("GRASS")) abilityMod = 1.5;
         }
 
-        // 3. HITUNG MULTIPLIER TIPE (STAB & Super Effective)
         double stab = TypeChart.getStabMultiplier(playerPokemon, playerChosenMove);
         double typeMod = TypeChart.getEffectiveness(playerChosenMove.getType(), enemyPokemon.getType1());
         if (enemyPokemon.getType2() != null) {
             typeMod *= TypeChart.getEffectiveness(playerChosenMove.getType(), enemyPokemon.getType2());
         }
 
-        // 4. HITUNG DAMAGE PAKAI BATTLE MECHANICS BARU
         int damage = BattleMechanics.calculateDamage(
             playerPokemon.getLevel(), atkStat, defStat, playerChosenMove.getPower(), stab, typeMod, abilityMod
         );
 
-        // 5. KURANGI HP MUSUH
         enemyPokemon.setCurrentHp(enemyPokemon.getCurrentHp() - damage);
         if (enemyPokemon.getCurrentHp() < 0) enemyPokemon.setCurrentHp(0);
         
-        // 6. MUNCULKAN TEKS NOTIFIKASI DI LAYAR
         battleMessage = playerPokemon.getName() + " used " + playerChosenMove.getName() + "!";
         if (typeMod > 1.0) effectMessage = "It's super effective!";
         else if (typeMod < 1.0 && typeMod > 0) effectMessage = "It's not very effective...";
@@ -446,7 +466,6 @@ private void playerAttackAction() {
         subState = SubState.MESSAGE_ONLY;
         Move move = enemyMoves.get((int) (Math.random() * enemyMoves.size()));
 
-        // 1. TENTUKAN STAT PHYSICAL / SPECIAL MUSUH
         int atkStat = 0;
         int defStat = 0;
         
@@ -458,7 +477,6 @@ private void playerAttackAction() {
             defStat = playerPokemon.getSpDef();
         }
 
-        // 2. SISTEM ABILITY MUSUH
         double abilityMod = 1.0;
         if (enemyPokemon.getCurrentHp() <= enemyPokemon.getMaxHp() / 3) {
             String pType = enemyPokemon.getType1();
@@ -468,24 +486,20 @@ private void playerAttackAction() {
             else if (pType.equals("GRASS") && mType.equals("GRASS")) abilityMod = 1.5;
         }
 
-        // 3. HITUNG MULTIPLIER TIPE (STAB & Super Effective)
         double stab = TypeChart.getStabMultiplier(enemyPokemon, move);
         double typeMod = TypeChart.getEffectiveness(move.getType(), playerPokemon.getType1());
         if (playerPokemon.getType2() != null) {
             typeMod *= TypeChart.getEffectiveness(move.getType(), playerPokemon.getType2());
         }
 
-        // 4. HITUNG DAMAGE FINAL
         int damage = BattleMechanics.calculateDamage(
             enemyPokemon.getLevel(), atkStat, defStat, move.getPower(), stab, typeMod, abilityMod
         );
 
-        // 5. KURANGI HP PLAYER
         playerPokemon.setCurrentHp(playerPokemon.getCurrentHp() - damage);
         if (playerPokemon.getCurrentHp() < 0) playerPokemon.setCurrentHp(0);
 
-        // 6. TEKS NOTIFIKASI
-        battleMessage = "Wild " + enemyPokemon.getName() + " used " + move.getName() + "!";        if (typeMod > 1.0) effectMessage = "It's super effective!";
+        battleMessage = "Wild " + enemyPokemon.getName() + " used " + move.getName() + "!";        
         if (typeMod > 1.0) effectMessage = "It's super effective!";
         else if (typeMod < 1.0 && typeMod > 0) effectMessage = "It's not very effective...";
         else if (typeMod == 0.0) effectMessage = "It had no effect...";
@@ -519,7 +533,7 @@ private void playerAttackAction() {
 
         if (keyHandler.actionPressed) {
             keyHandler.actionPressed = false;
-            gamePanel.playSoundEffect("res/sound/select.wav"); // Suara pas nge-klik OK
+            gamePanel.playSoundEffect("res/sound/select.wav"); 
             applyItemEffect(inventory.get(selectedItem));
         }
         if (keyHandler.backPressed) {
@@ -531,57 +545,65 @@ private void playerAttackAction() {
     private void applyItemEffect(Item item) {
         if (item.getQuantity() <= 0) return;
 
-        item.use(); // Ngurangin jumlah di RAM (memori sementara)
+        item.use(); 
         
-        // --- LAPORKAN KE DATABASE BIAR BENERAN BERKURANG! ---
         SaveManager.consumeItem(item.getName());
         
-        // --- BERSIHKAN DARI TAS KALAU ITEMNYA HABIS ---
         if (item.getQuantity() <= 0) {
             inventory.remove(item);
             if (selectedItem > 0) {
-                selectedItem--; // Geser kursor biar game nggak crash
+                selectedItem--; 
             }
         }
 
         subState = SubState.MESSAGE_ONLY;
         messageTimer = MESSAGE_DURATION;
         
-        // --- 1. LOGIKA ITEM PENYEMBUH (POTION) ---
         if (item.getName().toLowerCase().contains("potion")) {
             battleMessage = "Used " + item.getName().toUpperCase() + "!";
             playerPokemon.setCurrentHp(playerPokemon.getCurrentHp() + item.getEffectValue());
             if (playerPokemon.getCurrentHp() > playerPokemon.getMaxHp()) 
                 playerPokemon.setCurrentHp(playerPokemon.getMaxHp());
             
-            // Fix: Bebas milih Move setelah pakai item
             turnStep = 0; 
             justSwitched = false; 
         }
-        // --- 2. LOGIKA ITEM PENANGKAP (BALL) ---
         else if (item.getName().toLowerCase().contains("ball")) {
             battleMessage = "You threw a " + item.getName().toUpperCase() + "!";
+            messageTimer = 45; 
+            
+            String ballName = item.getName().toLowerCase();
+            if (ballName.contains("ultra")) {
+                currentBallImg = ultraballImg;
+                catchSuccess = Math.random() < 0.8; 
+            } else if (ballName.contains("great")) {
+                currentBallImg = greatballImg;
+                catchSuccess = Math.random() < 0.5;
+            } else {
+                currentBallImg = pokeballImg;
+                catchSuccess = Math.random() < 0.3;
+            }
             
             double catchChance = 1.0 - ((double) enemyPokemon.getCurrentHp() / enemyPokemon.getMaxHp());
-            if (item.getName().toLowerCase().contains("great")) {
-                catchChance *= 1.5; 
-            } else if (item.getName().toLowerCase().contains("ultra")) {
-                catchChance *= 2.0; 
-            }
+            if (ballName.contains("great")) catchChance *= 1.5; 
+            else if (ballName.contains("ultra")) catchChance *= 2.0; 
             if (catchChance < 0.2) catchChance = 0.2; 
             
-            if (Math.random() < catchChance) {
-                boolean success = SaveManager.catchPokemon(enemyPokemon.getPokeId(), enemyPokemon.getLevel(), enemyPokemon.getCurrentHp());
-                if (success) battleMessage = "Gotcha! " + enemyPokemon.getName().toUpperCase() + " was caught!";
-                else battleMessage = "The Ball broke due to a database error!";
-                phase = Phase.BATTLE_END; 
-            } else {
-                battleMessage = "Oh no! The wild " + enemyPokemon.getName() + " broke free!";
-                turnStep = 0;
-                justSwitched = false;
-            }
+            catchSuccess = Math.random() < catchChance; 
+            
+            ballStartX = 250;  
+            ballStartY = GamePanel.SCREEN_HEIGHT - 450; 
+            ballTargetX = GamePanel.SCREEN_WIDTH - 350; 
+            ballTargetY = 250;
+            
+            ballX = ballStartX;
+            ballY = ballStartY;
+            
+            subState = SubState.CATCH_ANIMATION;
+            catchPhase = -1; 
+            catchTimer = 0;
+            ballAngle = 0;
         }
-        // --- 3. LOGIKA ITEM STATUS (X SPEED) ---
         else if (item.getName().toLowerCase().contains("speed")) {
             playerPokemon.setSpeed(playerPokemon.getSpeed() + item.getEffectValue());
             battleMessage = playerPokemon.getName() + "'s SPEED rose sharply!";
@@ -629,7 +651,7 @@ private void playerAttackAction() {
 
         if (keyHandler.actionPressed) {
             keyHandler.actionPressed = false;
-            gamePanel.playSoundEffect("res/sound/select.wav"); // Suara pas nge-klik OK
+            gamePanel.playSoundEffect("res/sound/select.wav"); 
             Pokemon chosenPokemon = playerParty.get(selectedPartyIndex);
             
             if (chosenPokemon.isFainted()) {
@@ -678,11 +700,9 @@ private void playerAttackAction() {
         playerPokemon.gainExp(expGained); 
         int expNeeded = playerPokemon.getLevel() * 100;
         
-        // --- HITUNG DUIT & SIMPAN ---
         int moneyGained = enemyPokemon.getLevel() * 100; 
         SaveManager.playerMoney += moneyGained; 
         
-        // ATAS: Teks EXP | BAWAH: Teks Duit (Menimpa tulisan effective lama!)
         battleMessage = enemyPokemon.getName() + " fainted! Gained " + expGained + " EXP.";
         effectMessage = "Gained $" + moneyGained + "!";
         
@@ -702,17 +722,85 @@ private void playerAttackAction() {
             effectMessage = "Gained $" + moneyGained + " & HP Fully Restored!";
         }
         
-        messageTimer = 0; // SET 0 BIAR LANGSUNG NGUNCI, TIDAK JALAN OTOMATIS
+        messageTimer = 0; 
         phase = Phase.BATTLE_END;
         
         savePartyToDatabase(); 
     }
-
+    
+    private void handleCatchAnimation() {
+        if (messageTimer > 0) return; 
+        
+        if (catchPhase == -1) {
+            catchPhase = 0; 
+            gamePanel.playSoundEffect("res/sound/throw.wav"); 
+        }
+        
+        catchTimer++;
+        
+        if (catchPhase == 0) { // MELAYANG
+            int duration = 60; // 1 detik terbang
+            double t = (double) catchTimer / duration;
+            if (t >= 1.0) { t = 1.0; catchPhase = 1; catchTimer = 0; }
+            ballX = (int) (ballStartX + (ballTargetX - ballStartX) * t);
+            int arcHeight = (int) (Math.sin(t * Math.PI) * 200); 
+            ballY = (int) (ballStartY + (ballTargetY - ballStartY) * t) - arcHeight;
+            ballAngle += 0.3; 
+        } 
+        else if (catchPhase == 1) { // KESEDOT
+            if (catchTimer == 1) gamePanel.playSoundEffect("res/sound/poof.wav"); 
+            // Tunggu 1 detik (60 frame) biar suara poof selesai
+            if (catchTimer > 60) { catchPhase = 2; catchTimer = 0; }
+        } 
+        else if (catchPhase == 2) { // JATUH
+            ballY += 12;
+            if (ballY >= ballTargetY + 150) { 
+                ballY = ballTargetY + 150; 
+                catchPhase = 3; 
+                catchTimer = 0;
+                ballAngle = 0;
+            }
+        } 
+        else if (catchPhase == 3) { // GOYANG
+            // Kasih jeda antar goyangan lumayan lama (60 frame) biar suara shake selesai
+            if (catchTimer == 30 || catchTimer == 90 || catchTimer == 150) {
+                ballX += (catchTimer % 60 == 0) ? -15 : 15; 
+                gamePanel.playSoundEffect("res/sound/shake.wav"); // PASTIKAN GAK ADA hit.wav DI SINI!
+            } else if (catchTimer == 40 || catchTimer == 100 || catchTimer == 160) {
+                ballX = ballTargetX; 
+            }
+            
+            // Tunggu 1 detik lagi abis goyang terakhir biar menegangkan!
+            if (catchTimer > 220) {
+                catchPhase = 4;
+                catchTimer = 0;
+            }
+        } 
+        else if (catchPhase == 4) { // HASIL
+            if (catchSuccess) {
+                gamePanel.playSoundEffect("res/sound/caught.wav"); 
+                boolean success = SaveManager.catchPokemon(enemyPokemon.getPokeId(), enemyPokemon.getLevel(), enemyPokemon.getCurrentHp());
+                if (success) battleMessage = "Gotcha! " + enemyPokemon.getName().toUpperCase() + " was caught!";
+                else battleMessage = "The Ball broke due to a database error!";
+                phase = Phase.BATTLE_END; 
+            } else {
+                gamePanel.playSoundEffect("res/sound/break.wav"); 
+                battleMessage = "Oh no! The wild " + enemyPokemon.getName() + " broke free!";
+                turnStep = 0;
+                justSwitched = false;
+            }
+            
+            subState = SubState.MESSAGE_ONLY;
+            // --- INI KUNCINYA COO! Set timer jadi -1 biar game nunggu lu nekan ENTER ---
+            messageTimer = -1; 
+        }
+    }
+    
     private void flee() {
         battleMessage = "Got away safely!";
         messageTimer = MESSAGE_DURATION;
         phase = Phase.BATTLE_END;
-        savePartyToDatabase(); // FIX: Save HP pas kabur biar gak ngecheat wkwkwk
+        savePartyToDatabase(); 
     }
 
     private void changeSubState(SubState newState) {
@@ -739,15 +827,12 @@ private void playerAttackAction() {
         
         renderSprites(g2d);
 
-        // --- DEKLARASI VARIABEL CUKUP 1 KALI DI SINI AJA ---
         int bottomY = GamePanel.SCREEN_HEIGHT - 130;
         int boxX = 20;
-        int boxW = GamePanel.SCREEN_WIDTH - 40; // Default full layar
+        int boxW = GamePanel.SCREEN_WIDTH - 40; 
 
-        // --- FIX KOTAK KEBELAH & EFEK MESIN TIK ---
         if (!battleMessage.isEmpty()) {
             
-            // --- LOGIKA POTONG TEKS (MESIN TIK) ---
             String renderMsg1 = "";
             String renderMsg2 = "";
             int len1 = battleMessage.length();
@@ -760,11 +845,10 @@ private void playerAttackAction() {
                 renderMsg2 = effectMessage.substring(0, Math.min(effectMessage.length(), effectProgress));
             }
 
-            // 1. Panggil HUD dengan teks yang udah dipotong-potong per frame
             hud.renderDialogBox(g2d, renderMsg1, renderMsg2, pokemonFont);
             
-            // Panah Kedip Putih
-            if (phase == Phase.BATTLE_END && messageTimer == 0) {
+            // --- FIX: PANAH KEDIP MUNCUL JUGA PAS NUNGGU ENTER BUAT TANGKAPAN ---
+            if ((phase == Phase.BATTLE_END && messageTimer == 0) || messageTimer == -1) {
                 if (System.currentTimeMillis() % 1000 < 500) {
                     g2d.setColor(Color.WHITE); 
                     int arrowX = GamePanel.SCREEN_WIDTH - 60;
@@ -776,7 +860,6 @@ private void playerAttackAction() {
             }
             
         } else {
-            // 2. Kalau ngga ada pesan (lagi milih jurus), BattleState bikin kotak kecil buat HP Player!
             boxW = 400; 
             
             g2d.setColor(new Color(30, 30, 30, 250));
@@ -788,7 +871,6 @@ private void playerAttackAction() {
             renderStatusCard(g2d, boxX, bottomY, playerPokemon, false);
         }
 
-        // --- RENDER MENU ---
         if (messageTimer <= 0 && introCounter >= MAX_INTRO_TIME) {
             if (subState == SubState.MAIN_MENU) {
                 hud.renderBattleMenu(g2d, menuOptions, selectedOption, pokemonFont);
@@ -804,7 +886,6 @@ private void playerAttackAction() {
             }
         } 
         
-        // --- EFEK FADE OUT PAS KELUAR ---
         if (isExiting) {
             float finalAlpha = (float) exitCounter / MAX_EXIT_TIME;
             if (finalAlpha > 1f) finalAlpha = 1f; 
@@ -861,8 +942,42 @@ private void playerAttackAction() {
         }
 
         java.awt.image.BufferedImage eImg = SpriteLoader.loadPokemon(enemyPokemon.getPokeId());
-        if (eImg != null) {
+        
+        boolean showEnemy = true;
+        
+        if (subState == SubState.CATCH_ANIMATION && catchPhase >= 1) {
+            showEnemy = false; 
+        }
+        else if (phase == Phase.BATTLE_END && catchSuccess) {
+            showEnemy = false; 
+        }
+        
+        if (eImg != null && showEnemy) { 
             g2d.drawImage(eImg, eCurrentX, eTargetY, enemySpriteSize, enemySpriteSize, null);
+        }
+
+        if (subState == SubState.CATCH_ANIMATION && catchPhase >= 0 && catchPhase < 4) {
+            if (currentBallImg != null) {
+                int bSize = 50; 
+
+                java.awt.geom.AffineTransform oldTransform = g2d.getTransform();
+
+                if (catchPhase == 0) {
+                    g2d.rotate(ballAngle, ballX + (bSize / 2), ballY + (bSize / 2));
+                } 
+                else if (catchPhase == 3) {
+                    double wobbleAngle = 0;
+                    if (catchTimer >= 30 && catchTimer <= 40) wobbleAngle = -0.3; 
+                    if (catchTimer >= 90 && catchTimer <= 100) wobbleAngle = 0.3;  
+                    if (catchTimer >= 150 && catchTimer <= 160) wobbleAngle = -0.3; 
+                    
+                    g2d.rotate(wobbleAngle, ballX + (bSize / 2), ballY + bSize);
+                }
+
+                g2d.drawImage(currentBallImg, ballX, ballY, bSize, bSize, null);
+                
+                g2d.setTransform(oldTransform);
+            }
         }
     }
     
