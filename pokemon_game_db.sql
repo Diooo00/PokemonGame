@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: May 29, 2026 at 12:44 PM
+-- Generation Time: May 30, 2026 at 05:06 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -133,9 +133,10 @@ INSERT INTO `player_inventory` (`player_id`, `item_id`, `quantity`) VALUES
 (1, 1, 9),
 (1, 2, 6),
 (1, 3, 2),
-(1, 4, 10),
-(1, 5, 5),
-(1, 7, 5);
+(1, 4, 16),
+(1, 5, 6),
+(1, 7, 5),
+(1, 6, 3);
 
 -- --------------------------------------------------------
 
@@ -174,7 +175,7 @@ INSERT INTO `player_pokemon` (`instance_id`, `player_id`, `poke_id`, `level`, `c
 (7, 1, 617, 5, 100, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
 (8, 1, 640, 7, 115, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
 (9, 1, 639, 5, 111, 60, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(10, 1, 643, 34, 178, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(10, 1, 643, 36, 185, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
 (11, 1, 635, 4, 110, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
 (12, 1, 637, 5, 105, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
 (13, 1, 644, 6, 122, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
@@ -186,7 +187,8 @@ INSERT INTO `player_pokemon` (`instance_id`, `player_id`, `poke_id`, `level`, `c
 (19, 1, 646, 2, 139, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
 (21, 1, 598, 4, 92, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
 (22, 1, 621, 2, 91, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
-(23, 1, 493, 3, 136, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
+(23, 1, 493, 3, 136, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL),
+(24, 1, 445, 5, 128, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
 
 -- --------------------------------------------------------
 
@@ -208,7 +210,8 @@ CREATE TABLE `player_save` (
 --
 
 INSERT INTO `player_save` (`id`, `player_name`, `world_x`, `world_y`, `money`, `last_saved`) VALUES
-(1, 'Ash', 2066, 3215, 9200, '2026-05-29 10:44:01');
+(1, 'Ash', 3984, 3999, 9700, '2026-05-30 15:06:02'),
+(2, 'Trainer', 3893, 3880, 1600, '2026-05-30 15:04:55');
 
 -- --------------------------------------------------------
 
@@ -789,13 +792,13 @@ ALTER TABLE `moves_base`
 -- AUTO_INCREMENT for table `player_pokemon`
 --
 ALTER TABLE `player_pokemon`
-  MODIFY `instance_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
+  MODIFY `instance_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
 
 --
 -- AUTO_INCREMENT for table `player_save`
 --
 ALTER TABLE `player_save`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- Constraints for dumped tables

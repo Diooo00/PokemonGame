@@ -1,11 +1,6 @@
 package com.pokemongame.main;
 
-import com.pokemongame.pokemon.Pokemon;
-import com.pokemongame.state.OverworldState;
-import com.pokemongame.util.SaveManager;
-
-import java.awt.Dimension; // <-- PENTING: Import ini buat ngatur batas minimal jendela
-import java.util.List; 
+import java.awt.Dimension; 
 import javax.swing.JFrame;
 
 /**
@@ -31,27 +26,12 @@ public class Main {
         // --- 3. Kunci ukuran terkecil biar jendela ga bisa dikecilin sampai ilang ---
         window.setMinimumSize(new Dimension(GamePanel.SCREEN_WIDTH, GamePanel.SCREEN_HEIGHT + 40));
 
-        // 4. Sistem tangkap tombol X buat Auto-Save
+        // 4. Sistem tangkap tombol X buat Auto-Save (SUDAH DIHANCURKAN)
         window.addWindowListener(new java.awt.event.WindowAdapter() {
             @Override
             public void windowClosing(java.awt.event.WindowEvent windowEvent) {
-                System.out.println("Mendeteksi penutupan game... Menyimpan data...");
-                
-                // Gunakan fungsi getOverworldState() bawaan GamePanel-mu!
-                OverworldState overworld = gamePanel.getOverworldState();
-                
-                // Kalau lagi di map (bukan lagi battle), save koordinat & duit
-                if (overworld != null) {
-                    SaveManager.saveGame(overworld.getPlayer());
-                    
-                    // Save HP dan EXP Pokemon di tas juga biar gak kereset!
-                    List<Pokemon> party = SaveManager.loadPlayerParty();
-                    for(Pokemon p : party) {
-                        SaveManager.savePokemonStatus(p);
-                    }
-                }
-                
-                // Setelah selesai nge-save, baru matikan programnya
+                // HANYA nutup game, ga ada nge-save lagi!
+                System.out.println("Mendeteksi penutupan game... Goodbye!");
                 System.exit(0);
             }
         });

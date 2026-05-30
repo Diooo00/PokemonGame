@@ -6,6 +6,11 @@
             <file>file:/D:/Coolyeah/Semester%204/Prak%20PBO/PokemonGame/src/com/pokemongame/main/Main.java</file>
             <file>file:/D:/Coolyeah/Semester%204/Prak%20PBO/PokemonGame/src/com/pokemongame/main/GamePanel.java</file>
             <file>file:/D:/Coolyeah/Semester%204/Prak%20PBO/PokemonGame/src/com/pokemongame/state/BattleState.java</file>
+            <file>file:/D:/Coolyeah/Semester%204/Prak%20PBO/PokemonGame/src/com/pokemongame/state/GameState.java</file>
+            <file>file:/D:/Coolyeah/Semester%204/Prak%20PBO/PokemonGame/src/com/pokemongame/main/GameWindow.java</file>
+            <file>file:/D:/Coolyeah/Semester%204/Prak%20PBO/PokemonGame/src/com/pokemongame/state/PauseState.java</file>
+            <file>file:/D:/Coolyeah/Semester%204/Prak%20PBO/PokemonGame/src/com/pokemongame/util/SaveManager.java</file>
+            <file>file:/D:/Coolyeah/Semester%204/Prak%20PBO/PokemonGame/src/com/pokemongame/state/OverworldState.java</file>
         </group>
     </open-files>
 </project-private>

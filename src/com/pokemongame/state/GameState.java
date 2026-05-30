@@ -12,7 +12,6 @@ import java.awt.Graphics2D;
  */
 public abstract class GameState {
 
-    // Setiap state punya akses ke GamePanel
     protected GamePanel gamePanel;
 
     public GameState(GamePanel gamePanel) {

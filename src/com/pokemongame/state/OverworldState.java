@@ -36,6 +36,9 @@ public class OverworldState extends GameState {
     private Pokemon pendingWildPokemon;
     private Pokemon pendingPlayerActive;
     private boolean actionWasPressed = false;
+    
+    // --- TAMBAHAN UNTUK ANTI-BOUNCE ESC ---
+    private boolean escapeWasPressed = false;
 
     public OverworldState(GamePanel gamePanel) {
         super(gamePanel);
@@ -72,10 +75,19 @@ public class OverworldState extends GameState {
                 actionWasPressed = false; // Buka gembok kalau tombol dilepas
             }
             
+            // --- JURUS BUKA PAUSE MENU (AUTO-SAVE UDAH DIHAPUS) ---
             if (keyHandler.backPressed) {
-                keyHandler.backPressed = false;
-                SaveManager.saveGame(player);
-                System.out.println("Game koordinat berhasil disimpan ke Database!");
+                if (!escapeWasPressed) {
+                    escapeWasPressed = true;
+                    keyHandler.backPressed = false;
+                    gamePanel.playSoundEffect("res/sound/select.wav");
+                    
+                    // Panggil Menu Pause!
+                    gamePanel.setCurrentState(new PauseState(gamePanel, this));
+                    return; // Kunci update biar layar map berhenti
+                }
+            } else {
+                escapeWasPressed = false;
             }
 
             player.update();
